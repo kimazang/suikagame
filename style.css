@@ -406,17 +406,41 @@ body {
 }
 
 .canvas-wrap.shake-hard {
-  animation: qplayGameOverShake 2s cubic-bezier(.36,.07,.19,.97) both;
+  animation: qplayPhoneVibration 1.4s linear both;
 }
 
-@keyframes qplayGameOverShake {
-  0%   { transform: translate(0, 0) rotate(0deg); }
-  10%  { transform: translate(-8px, 4px) rotate(-1deg); }
-  20%  { transform: translate(8px, -4px) rotate(1deg); }
-  30%  { transform: translate(-7px, -5px) rotate(-1deg); }
-  40%  { transform: translate(7px, 5px) rotate(1deg); }
-  50%  { transform: translate(-5px, 3px) rotate(-0.6deg); }
-  60%  { transform: translate(5px, -3px) rotate(0.6deg); }
-  75%  { transform: translate(-3px, 2px) rotate(-0.3deg); }
-  100% { transform: translate(0, 0) rotate(0deg); }
+@keyframes qplayPhoneVibration {
+  0%   { transform: translateX(0); }
+  3%   { transform: translateX(-3px); }
+  6%   { transform: translateX(3px); }
+  9%   { transform: translateX(-3px); }
+  12%  { transform: translateX(3px); }
+  15%  { transform: translateX(-2px); }
+  18%  { transform: translateX(2px); }
+  21%  { transform: translateX(-3px); }
+  24%  { transform: translateX(3px); }
+  27%  { transform: translateX(-2px); }
+  30%  { transform: translateX(2px); }
+  33%  { transform: translateX(-3px); }
+  36%  { transform: translateX(3px); }
+  39%  { transform: translateX(-2px); }
+  42%  { transform: translateX(2px); }
+  45%  { transform: translateX(-3px); }
+  48%  { transform: translateX(3px); }
+  51%  { transform: translateX(-2px); }
+  54%  { transform: translateX(2px); }
+  57%  { transform: translateX(-3px); }
+  60%  { transform: translateX(3px); }
+  63%  { transform: translateX(-2px); }
+  66%  { transform: translateX(2px); }
+  69%  { transform: translateX(-3px); }
+  72%  { transform: translateX(3px); }
+  75%  { transform: translateX(-2px); }
+  78%  { transform: translateX(2px); }
+  81%  { transform: translateX(-2px); }
+  84%  { transform: translateX(2px); }
+  87%  { transform: translateX(-1px); }
+  90%  { transform: translateX(1px); }
+  94%  { transform: translateX(-1px); }
+  100% { transform: translateX(0); }
 }
