@@ -797,7 +797,7 @@ function buildEvoRing(activeLevel = 0) {
     <div class="ring-gloss"></div>
   `;
 
-  const cx = 95, cy = 95, r = 72;
+  const cx = 83, cy = 83, r = 65;
 
   BALL_IMAGES.forEach((url, i) => {
     const level = i + 1;
