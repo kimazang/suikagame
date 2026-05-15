@@ -37,7 +37,7 @@ const FIREBASE_CONFIG = {
 // ====================================================
 const BOARD_WIDTH  = 544;
 const BOARD_HEIGHT = 708;
-const DANGER_Y     = 115;  // 게임오버 판정 Y
+const DANGER_Y     = 120;  // 게임오버 판정 Y
 const DROP_Y       = 80;   // 공 시작 Y
 const DROP_COOLDOWN = 550; // 드롭 후 쿨다운 ms
 
