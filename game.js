@@ -342,25 +342,18 @@ function processMergePair(a, b) {
   const lvB = b.gameData.level;
   if (lvA !== lvB || lvA >= 11) return;
 
-  // 스폰 직후 합체 방지 (0.3초)
-  const now = Date.now();
-  if (now - a.gameData.spawnTime < 300) return;
-  if (now - b.gameData.spawnTime < 300) return;
-
-  // 중복 방지
   const uidA = a.gameData.uid;
   const uidB = b.gameData.uid;
   const key  = uidA < uidB ? `${uidA}_${uidB}` : `${uidB}_${uidA}`;
   if (mergeQueue.has(key)) return;
+
   mergeQueue.add(key);
 
   a.gameData.isMerging = true;
   b.gameData.isMerging = true;
 
-  setTimeout(() => {
-    mergeQueue.delete(key);
-    mergeBalls(a, b, lvA);
-  }, 1);
+  mergeBalls(a, b, lvA);
+  mergeQueue.delete(key);
 }
 
 // ====================================================
@@ -370,22 +363,17 @@ let proximityCheckFrame = 0;
 
 function checkProximityMerges() {
   proximityCheckFrame++;
-  // 매 3프레임마다 검사 (성능 절충)
-  if (proximityCheckFrame % 3 !== 0) return;
   if (gameOver) return;
 
-  const now = Date.now();
   const len = activeBodies.length;
 
   for (let i = 0; i < len; i++) {
     const a = activeBodies[i];
     if (!a || !a.gameData || a.gameData.isMerging) continue;
-    if (now - a.gameData.spawnTime < 300) continue;
 
     for (let j = i + 1; j < len; j++) {
       const b = activeBodies[j];
       if (!b || !b.gameData || b.gameData.isMerging) continue;
-      if (now - b.gameData.spawnTime < 300) continue;
 
       const lvA = a.gameData.level;
       const lvB = b.gameData.level;
