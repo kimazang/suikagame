@@ -550,28 +550,35 @@ ctx.clip();
   });
 
   // [3] 세로 가이드 라인 제거 → 미리보기 공만 표시 (세로선 없음)
-  if (canDrop && !gameOver) {
-    const lv     = currentLv;
-    const radius = BALL_RADII[lv - 1];
-    const img    = imgs[lv - 1];
-    const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
+  // [3] 떨어지기 전 대기 공 표시
+if (canDrop && !gameOver) {
+  const lv     = currentLv;
+  const radius = BALL_RADII[lv - 1];
+  const img    = imgs[lv - 1];
+  const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
 
-    ctx.save();
-    ctx.translate(safeX, DROP_Y);
-    ctx.globalAlpha = 0.1;
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
+  ctx.save();
 
-    if (img && img.complete && img.naturalWidth > 0) {
-      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
-    } else {
-      ctx.fillStyle = FALLBACK_COLORS[lv - 1];
-      ctx.fill();
-    }
-    ctx.restore();
+  // ★ 절대 흐리지 않게: 완전 불투명
+  ctx.globalAlpha = 1;
+  ctx.translate(safeX, DROP_Y);
+  ctx.rotate(0);
+  ctx.scale(1, 1);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+  } else {
+    ctx.fillStyle = FALLBACK_COLORS[lv - 1];
+    ctx.fill();
   }
+
+  ctx.restore();
+}
 
   if (gameOver) {
     ctx.fillStyle = 'rgba(200,230,255,0.4)';
