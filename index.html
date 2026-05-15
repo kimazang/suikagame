@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
   <!-- 기본 정보 -->
-  <title>김아장 만들기 🤎</title>
-  <meta name="description" content="큐플레이 캐릭터를 합쳐 아장이를 만들어 보세요!" />
+  <title>갈뚱 만들기 🤎</title>
+  <meta name="description" content="큐플레이 캐릭터를 합쳐 갈뚱을 만들어 보세요!" />
 
   <!-- 파비콘 -->
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/kimazang/suikagame/main/favicon.png" />
@@ -14,15 +14,15 @@
 
   <!-- 카카오톡 / 디스코드 / 링크 미리보기 -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="김아장 만들기 🤎" />
-  <meta property="og:description" content="큐플레이 캐릭터를 합쳐 아장이를 만들어 보세요!" />
+  <meta property="og:title" content="갈뚱 만들기 🤎" />
+  <meta property="og:description" content="큐플레이 캐릭터를 합쳐 갈뚱을 만들어 보세요!" />
   <meta property="og:image" content="https://raw.githubusercontent.com/kimazang/suikagame/main/preview.png" />
   <meta property="og:url" content="https://kimazang.github.io/suikagame/" />
 
   <!-- 트위터 / X 미리보기 -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="김아장 만들기 🤎" />
-  <meta name="twitter:description" content="큐플레이 캐릭터를 합쳐 아장이를 만들어 보세요!" />
+  <meta name="twitter:title" content="갈뚱 만들기 🤎" />
+  <meta name="twitter:description" content="큐플레이 캐릭터를 합쳐 갈뚱을 만들어 보세요!" />
   <meta name="twitter:image" content="https://raw.githubusercontent.com/kimazang/suikagame/main/preview.png" />
 
   <link rel="stylesheet" href="style.css" />
@@ -33,7 +33,7 @@
   <div id="nickname-modal" class="overlay">
     <div class="modal-box">
       <div class="modal-emoji">🤎</div>
-      <h2 class="modal-title">김아장 만들기</h2>
+      <h2 class="modal-title">갈뚱 만들기</h2>
       <p class="modal-desc">닉네임을 설정하면 랭킹에 기록돼요.<br>2~10글자로 입력해주세요.</p>
       <input type="text" id="nickname-input" class="nickname-input"
         maxlength="10" placeholder="닉네임 입력" autocomplete="off" />
@@ -58,11 +58,11 @@
           <div id="go-best" class="go-stat-val gold"></div>
         </div>
         <div class="go-stat-item">
-          <div class="go-stat-label">이번 판 아장</div>
+          <div class="go-stat-label">이번 판 갈뚱 기록</div>
           <div id="go-wm" class="go-stat-val"></div>
         </div>
         <div class="go-stat-item">
-          <div class="go-stat-label">최고 아장</div>
+          <div class="go-stat-label">갈뚱 최고 기록</div>
           <div id="go-best-wm" class="go-stat-val gold"></div>
         </div>
       </div>
@@ -80,7 +80,7 @@
 
     <!-- 왼쪽 패널 (PC) -->
     <aside class="left-panel panel">
-      <div class="panel-logo">🤎 김아장 만들기</div>
+      <div class="panel-logo">🤎 갈뚱 만들기</div>
       <div class="player-row">
         <span id="player-display" class="player-name">플레이어: -</span>
         <button id="change-nickname-btn" class="btn btn-ghost btn-sm">변경</button>
@@ -97,12 +97,12 @@
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">이번 판 아장이와 데이트 🤎</div>
+          <div class="score-label">이번 판 갈뚱 기록 🤎</div>
           <div id="wm-display" class="score-val">0번</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">아장이와 데이트 기록 🤎</div>
+          <div class="score-label">갈뚱 만들기 최고 기록 🤎</div>
           <div id="best-wm-display" class="score-val gold">0번</div>
         </div>
       </div>
@@ -128,7 +128,7 @@
           <span id="mob-best" class="mob-val gold">0</span>
         </div>
         <div class="mob-score-group">
-          <span class="mob-label">아장🤎</span>
+          <span class="mob-label">갈뚱🤎</span>
           <span id="mob-wm" class="mob-val">0</span>
         </div>
         <div class="mob-next-group">
@@ -154,7 +154,7 @@
 
     <!-- 오른쪽 패널: 진화의 고리 + 랭킹 (PC) -->
     <aside class="right-panel panel">
-      <div class="panel-logo">김아장 제작법</div>
+      <div class="panel-logo">갈뚱 제작법</div>
       <div id="evolution-ring" class="evolution-ring"></div>
 
       <div class="panel-logo rank-logo">🏆 TOP 10</div>
