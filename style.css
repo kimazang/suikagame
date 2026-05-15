@@ -153,7 +153,7 @@ body {
   display: grid;
   grid-template-columns: 210px 1fr 230px;
   gap: 18px;
-  max-width: 1060px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 18px 14px 40px;
   align-items: start;
@@ -269,7 +269,7 @@ body {
 .canvas-wrap {
   position: relative;
   width: 100%;
-  max-width: 460px;
+  max-width: 544px;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 0 0 3px var(--border), var(--shadow-lg);
@@ -287,7 +287,7 @@ body {
   display: none;
   gap: 10px;
   width: 100%;
-  max-width: 460px;
+  max-width: 544px;
 }
 
 /* ── 오른쪽 패널 ── */
