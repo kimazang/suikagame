@@ -792,16 +792,13 @@ function buildEvoRing(activeLevel = 0) {
   const ring = document.getElementById('evolution-ring');
   if (!ring) return;
 
-  ring.innerHTML = `
-    <div class="ring-arrow-head"></div>
-    <div class="ring-gloss"></div>
-  `;
+  ring.innerHTML = '';
 
   const cx = 83, cy = 83, r = 65;
 
   BALL_IMAGES.forEach((url, i) => {
     const level = i + 1;
-    const angle = -145 + i * (285 / 10);
+    const angle = -90 + i * (360 / 11);
     const rad   = angle * Math.PI / 180;
 
     const div = document.createElement('div');
@@ -812,6 +809,7 @@ function buildEvoRing(activeLevel = 0) {
     const img = document.createElement('img');
     img.src = url;
     img.alt = level + '단계';
+
     div.appendChild(img);
     ring.appendChild(div);
   });
