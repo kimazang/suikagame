@@ -406,7 +406,7 @@ body {
 }
 
 .canvas-wrap.shake-hard {
-  animation: qplayGameOverShake 0.65s cubic-bezier(.36,.07,.19,.97) both;
+  animation: qplayGameOverShake 2s cubic-bezier(.36,.07,.19,.97) both;
 }
 
 @keyframes qplayGameOverShake {
