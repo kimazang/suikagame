@@ -539,12 +539,13 @@ function renderFrame() {
     const scale = body.gameData.popScale;
 
     ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(scale, scale);
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
+ctx.translate(x, y);
+ctx.rotate(body.angle);
+ctx.scale(scale, scale);
+ctx.beginPath();
+ctx.arc(0, 0, radius, 0, Math.PI * 2);
+ctx.closePath();
+ctx.clip();
 
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
