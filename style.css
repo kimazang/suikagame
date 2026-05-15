@@ -305,8 +305,8 @@ body {
 }
 .ring-item {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: rgba(255,255,255,0.85);
   border: 2px solid rgba(255,255,255,0.95);
@@ -316,7 +316,7 @@ body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   transition: transform 0.2s;
 }
-.ring-item img { width: 24px; height: 24px; object-fit: contain; }
+.ring-item img { width: 26px; height: 26px; object-fit: contain; }
 .ring-item.active {
   background: #fff;
   border-color: var(--orange);
