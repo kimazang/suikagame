@@ -625,23 +625,23 @@ async function endGame() {
   if (gameOver) return;
   gameOver = true;
 
-  // 게임판 덜덜 진동
   const wrap = document.getElementById('canvas-wrap');
   if (wrap) {
     wrap.classList.remove('shake-hard');
-    void wrap.offsetWidth; // 애니메이션 재시작용
+    void wrap.offsetWidth;
     wrap.classList.add('shake-hard');
 
     setTimeout(() => {
-  wrap.classList.remove('shake-hard');
-}, 1500);
+      wrap.classList.remove('shake-hard');
+    }, 1500);
   }
 
-  const prevBest = lsGetInt(LS.BEST_SCORE, 0);
+const prevBest = lsGetInt(LS.BEST_SCORE, 0);
   const prevBestWm = lsGetInt(LS.BEST_WATERMELON, 0);
-  let scoreUpdated = false, wmUpdated = false;
+  let scoreUpdated = false;
+  let wmUpdated = false;
 
-  if (score > prevBest) {
+ if (score > prevBest) {
     lsSet(LS.BEST_SCORE, score);
     bestScore = score;
     scoreUpdated = true;
@@ -655,16 +655,14 @@ async function endGame() {
 
   updateScoreUI();
 
-  // 진동을 먼저 보여준 뒤 게임오버 모달 표시
   setTimeout(() => {
     showGameoverModal(scoreUpdated, wmUpdated);
   }, 1400);
 
-
-if (firebaseEnabled && nickname && (scoreUpdated || wmUpdated)) {
-  await saveToFirebase();
-}
+  if (firebaseEnabled && nickname && (scoreUpdated || wmUpdated)) {
+    await saveToFirebase();
   }
+}
 
 // ====================================================
 // 재시작
