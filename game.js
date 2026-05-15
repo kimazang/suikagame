@@ -792,7 +792,7 @@ function buildEvoRing(activeLevel = 0) {
   const ring = document.getElementById('evolution-ring');
   if (!ring) return;
   ring.innerHTML = '';
-  const cx = 83, cy = 83, r = 65;
+  const cx = 95, cy = 95, r = 72;
 
   BALL_IMAGES.forEach((url, i) => {
     const level = i + 1;
