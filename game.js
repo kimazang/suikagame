@@ -791,12 +791,17 @@ function escHtml(s) {
 function buildEvoRing(activeLevel = 0) {
   const ring = document.getElementById('evolution-ring');
   if (!ring) return;
-  ring.innerHTML = '';
+
+  ring.innerHTML = `
+    <div class="ring-arrow-head"></div>
+    <div class="ring-gloss"></div>
+  `;
+
   const cx = 95, cy = 95, r = 72;
 
   BALL_IMAGES.forEach((url, i) => {
     const level = i + 1;
-    const angle = -90 + i * (360 / 11);
+    const angle = -145 + i * (285 / 10);
     const rad   = angle * Math.PI / 180;
 
     const div = document.createElement('div');
