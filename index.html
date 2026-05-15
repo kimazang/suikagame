@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>큐플 얼굴 합치기</title>
+    <!-- Phaser 3 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #fff9e6; /* 밝은 크림색 */
+            --card-bg: #ffffff;
+            --text-main: #4a4a4a;
+            --text-light: #8c8c8c;
+            --primary-color: #ff8e8b; /* 코랄 핑크 */
+            --primary-hover: #ff7370;
+            --secondary-color: #79d2c2; /* 민트 */
+            --secondary-hover: #5ec2af;
+            --border-radius: 20px;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            gap: 24px;
+            max-width: 1100px;
+            width: 100%;
+            padding: 20px;
+            margin: 0 auto;
+        }
+
+        /* 게임 영역 */
+        .game-wrapper {
+            position: relative;
+            background: #eef7fd; /* 연하늘색 게임 배경 */
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 4px solid #ffffff;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+        }
+
+        #game-container canvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* 사이드바 UI */
+        .ui-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex-grow: 1;
+            min-width: 280px;
+        }
+
+        .title-card, .score-card, .next-ball-card, .controls-card, .how-to-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .title-card {
+            text-align: center;
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .title-card h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .score-card {
+            display: flex;
+            gap: 12px;
+        }
+
+        .score-box {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .score-box.current {
+            background: #fff0f0;
+            border: 2px solid var(--primary-color);
+        }
+
+        .score-box .label {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .score-box.current .label {
+            color: var(--primary-color);
+        }
+
+        .score-box .value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .score-box.current .value {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+        }
+
+        .next-ball-card {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .next-ball-card .label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .next-ball-preview {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 50%;
+            border: 2px dashed #ddd;
+        }
+
+        .next-ball-preview img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 50%;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .placeholder-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            opacity: 0.8;
+        }
+
+        /* 버튼 */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .primary-btn {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 142, 139, 0.3);
+        }
+
+        .primary-btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .primary-btn:active {
+            transform: translateY(0);
+        }
+
+        .secondary-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            box-shadow: 0 4px 12px rgba(121, 210, 194, 0.3);
+        }
+
+        .secondary-btn:hover {
+            background-color: var(--secondary-hover);
+            transform: translateY(-2px);
+        }
+
+        .secondary-btn:active {
+            transform: translateY(0);
+        }
+
+        /* 게임 방법 */
+        .how-to-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+        }
+
+        .how-to-card ul {
+            list-style-type: none;
+            padding-left: 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .how-to-card li {
+            position: relative;
+            padding-left: 16px;
+            margin-bottom: 8px;
+        }
+
+        .how-to-card li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        /* 모달 */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border: 4px solid var(--primary-color);
+        }
+
+        .modal-content h2 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 16px;
+        }
+
+        .modal-content p {
+            font-size: 1.2rem;
+            margin-bottom: 24px;
+            color: var(--text-main);
+        }
+
+        #modal-score {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+
+        /* 반응형 (모바일) */
+        @media (max-width: 800px) {
+            .app-container {
+                flex-direction: column;
+                padding: 10px;
+                gap: 12px;
+            }
+
+            .game-wrapper {
+                order: 2; /* 모바일에서는 게임판을 중간에 배치 */
+                width: 100%;
+                max-width: 100%; /* 부모 너비에 맞춤 */
+            }
+            
+            #game-container canvas {
+                width: 100% !important; /* 캔버스가 부모 너비를 넘지 않도록 강제 */
+                height: auto !important; /* 비율 유지 */
+            }
+
+            .ui-sidebar {
+                order: 1;
+                gap: 12px;
+            }
+
+            .score-card {
+                flex-direction: row;
+            }
+            
+            .how-to-card {
+                order: 3;
+            }
+            
+            .controls-card {
+                order: 4;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 게임 영역 -->
+        <div class="game-wrapper">
+            <div id="game-container"></div>
+            
+            <!-- 게임 오버 모달 -->
+            <div id="game-over-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h2>Game Over!</h2>
+                    <p>최종 점수: <span id="modal-score">0</span></p>
+                    <button id="modal-restart-btn" class="btn primary-btn">다시 시작하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 사이드바 (점수 및 UI) -->
+        <aside class="ui-sidebar">
+            <header class="title-card">
+                <h1>큐플 얼굴 합치기</h1>
+            </header>
+
+            <div class="score-card">
+                <div class="score-box">
+                    <span class="label">최고 점수</span>
+                    <span id="best-score" class="value">0</span>
+                </div>
+                <div class="score-box current">
+                    <span class="label">현재 점수</span>
+                    <span id="current-score" class="value">0</span>
+                </div>
+            </div>
+
+            <div class="next-ball-card">
+                <span class="label">다음 얼굴</span>
+                <div class="next-ball-preview">
+                    <!-- 이미지 로드 실패 시 깨진 이미지 대신 숨기고 원형 플레이스홀더 표시 -->
+                    <img id="next-ball-img" src="" alt="Next Ball" style="display: none;" onerror="this.style.display='none'; document.getElementById('next-ball-placeholder').style.display='block';">
+                    <div id="next-ball-placeholder" class="placeholder-circle" style="display: block;"></div>
+                </div>
+            </div>
+
+            <div class="controls-card">
+                <button id="restart-btn" class="btn secondary-btn">처음부터 다시</button>
+            </div>
+
+            <div class="how-to-card">
+                <h3>게임 방법</h3>
+                <ul>
+                    <li>마우스(또는 터치)로 공을 떨어뜨릴 위치를 정하세요.</li>
+                    <li>클릭하면 공이 떨어집니다.</li>
+                    <li>같은 얼굴 2개가 만나면 다음 단계의 더 큰 얼굴로 합쳐집니다!</li>
+                    <li>상단 위험선 위로 공이 넘어가면 게임이 끝납니다.</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        /**
+         * 큐플 얼굴 합치기 게임 로직
+         * Phaser 3 + Matter.js 기반
+         */
+
+        const GAME_WIDTH = 650;
+        const GAME_HEIGHT = 720;
+        const DROP_LINE_Y = 100; // 위험선 높이
+        const WALL_THICKNESS = 60; // 보이지 않는 벽 두께
+        const COOLDOWN_TIME = 600; // 공 드롭 쿨타임 (ms)
+
+        const BALLS = [
+            { level: 1, key: "suika1", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika1.png", radius: 24, score: 1 },
+            { level: 2, key: "suika2", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika2.png", radius: 30, score: 3 },
+            { level: 3, key: "suika3", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika3.png", radius: 38, score: 6 },
+            { level: 4, key: "suika4", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika4.png", radius: 48, score: 10 },
+            { level: 5, key: "suika5", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika5.png", radius: 60, score: 15 },
+            { level: 6, key: "suika6", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika6.png", radius: 74, score: 21 },
+            { level: 7, key: "suika7", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika7.png", radius: 90, score: 28 },
+            { level: 8, key: "suika8", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika8.png", radius: 108, score: 36 },
+            { level: 9, key: "suika9", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika9.png", radius: 128, score: 45 },
+            { level: 10, key: "suika10", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika10.png", radius: 150, score: 55 },
+            { level: 11, key: "suika11", image: "https://raw.githubusercontent.com/kimazang/suikagame/main/suika11.png", radius: 176, score: 66 }
+        ];
+
+        let currentScore = 0;
+        let isGameOver = false;
+        let nextBallLevel = 1;
+        let canDrop = true;
+        let lastPointerX = GAME_WIDTH / 2;
+        let activeBalls = [];
+
+        // 미리보기 화면 등에서 localStorage 접근이 막혔을 때를 대비한 안전한 저장소 로직
+        let tempMemoryScore = 0;
+        function getBestScore() {
+            try {
+                return parseInt(localStorage.getItem('qplayMergeBestScore')) || 0;
+            } catch (e) {
+                console.warn('localStorage is restricted. Using temporary memory.');
+                return tempMemoryScore;
+            }
+        }
+
+        function setBestScore(score) {
+            try {
+                localStorage.setItem('qplayMergeBestScore', score);
+            } catch (e) {
+                tempMemoryScore = score;
+            }
+        }
+        
+        let bestScore = getBestScore();
+
+        class MainScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'MainScene' });
+            }
+
+            init() {
+                isGameOver = false;
+                currentScore = 0;
+                canDrop = true;
+                activeBalls = [];
+                this.updateScoreUI();
+            }
+
+            preload() {
+                this.cameras.main.setBackgroundColor('#eef7fd');
+                
+                // 중요: 외부 이미지 로딩을 위한 CORS 허용 설정
+                this.load.crossOrigin = 'anonymous';
+
+                BALLS.forEach(ball => {
+                    this.load.image(ball.key, ball.image);
+                });
+
+                // 이미지 로드 실패 시 대체 이미지 생성 기능 (초록색 상자 방지)
+                this.load.on('loaderror', (fileObj) => {
+                    console.warn('Failed to load image:', fileObj.key, 'Creating fallback circle.');
+                    const g = this.make.graphics({x: 0, y: 0, add: false});
+                    g.fillStyle(0xff8e8b, 1);
+                    g.fillCircle(100, 100, 100);
+                    g.lineStyle(8, 0xffffff, 1);
+                    g.strokeCircle(100, 100, 100);
+                    g.generateTexture(fileObj.key, 200, 200);
+                });
+
+                const graphics = this.add.graphics();
+                graphics.fillStyle(0xffffff, 1);
+                graphics.fillCircle(4, 4, 4);
+                graphics.generateTexture('particle_base', 8, 8);
+                graphics.destroy();
+            }
+
+            create() {
+                this.matter.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT, WALL_THICKNESS, true, true, false, true);
+                this.drawDangerLine();
+                this.setNextBall();
+                this.setupInputs();
+                this.setupCollisions();
+
+                this.previewLine = this.add.line(0, 0, 0, 0, 0, GAME_HEIGHT, 0xffffff, 0.4).setOrigin(0, 0);
+                
+                this.previewBall = this.add.image(lastPointerX, DROP_LINE_Y / 2, BALLS[nextBallLevel - 1].key)
+                    .setAlpha(0.5)
+                    .setDisplaySize(BALLS[nextBallLevel - 1].radius * 2, BALLS[nextBallLevel - 1].radius * 2);
+            }
+
+            update(time, delta) {
+                if (isGameOver) return;
+                this.checkGameOver(time);
+                this.updatePreviewPosition();
+            }
+
+            drawDangerLine() {
+                const graphics = this.add.graphics();
+                graphics.lineStyle(2, 0xff8e8b, 0.5); 
+                
+                const dashLength = 10;
+                const gapLength = 10;
+                for (let x = 0; x < GAME_WIDTH; x += dashLength + gapLength) {
+                    graphics.beginPath();
+                    graphics.moveTo(x, DROP_LINE_Y);
+                    graphics.lineTo(x + dashLength, DROP_LINE_Y);
+                    graphics.strokePath();
+                }
+
+                this.add.text(10, DROP_LINE_Y - 20, 'DANGER', {
+                    fontFamily: 'Pretendard',
+                    fontSize: '14px',
+                    color: '#ff8e8b',
+                    fontWeight: 'bold'
+                }).setAlpha(0.7);
+            }
+
+            setupInputs() {
+                this.input.on('pointermove', (pointer) => {
+                    if (isGameOver) return;
+                    const margin = BALLS[nextBallLevel - 1].radius;
+                    lastPointerX = Phaser.Math.Clamp(pointer.x, margin, GAME_WIDTH - margin);
+                });
+
+                this.input.on('pointerdown', (pointer) => {
+                    if (isGameOver || !canDrop) return;
+                    if (pointer.rightButtonDown()) return;
+
+                    const margin = BALLS[nextBallLevel - 1].radius;
+                    lastPointerX = Phaser.Math.Clamp(pointer.x, margin, GAME_WIDTH - margin);
+                    
+                    this.dropBall();
+                });
+
+                this.input.mouse.disableContextMenu();
+            }
+
+            updatePreviewPosition() {
+                if (!this.previewBall || !this.previewLine) return;
+
+                if (canDrop && !isGameOver) {
+                    this.previewBall.setVisible(true);
+                    this.previewLine.setVisible(true);
+                    
+                    this.previewBall.x = lastPointerX;
+                    this.previewBall.y = DROP_LINE_Y / 2;
+                    
+                    const ballData = BALLS[nextBallLevel - 1];
+                    this.previewBall.setTexture(ballData.key);
+                    this.previewBall.setDisplaySize(ballData.radius * 2, ballData.radius * 2);
+
+                    this.previewLine.setTo(lastPointerX, DROP_LINE_Y / 2, lastPointerX, GAME_HEIGHT);
+                } else {
+                    this.previewBall.setVisible(false);
+                    this.previewLine.setVisible(false);
+                }
+            }
+
+            getRandomDropLevel() {
+                return Phaser.Math.Between(1, 5);
+            }
+
+            setNextBall() {
+                nextBallLevel = this.getRandomDropLevel();
+                
+                const nextImg = document.getElementById('next-ball-img');
+                const placeholder = document.getElementById('next-ball-placeholder');
+                
+                const ballData = BALLS[nextBallLevel - 1];
+                nextImg.src = ballData.image;
+                nextImg.style.display = 'block';
+                placeholder.style.display = 'none';
+            }
+
+            dropBall() {
+                canDrop = false;
+                const yPos = DROP_LINE_Y / 2;
+                
+                this.createBall(lastPointerX, yPos, nextBallLevel);
+                this.setNextBall();
+
+                this.time.delayedCall(COOLDOWN_TIME, () => {
+                    canDrop = true;
+                    const margin = BALLS[nextBallLevel - 1].radius;
+                    lastPointerX = Phaser.Math.Clamp(lastPointerX, margin, GAME_WIDTH - margin);
+                });
+            }
+
+            createBall(x, y, level) {
+                const ballData = BALLS[level - 1];
+                const ball = this.matter.add.image(x, y, ballData.key);
+                
+                ball.setCircle(ballData.radius);
+                ball.setBounce(0.3);
+                ball.setFriction(0.005);
+                ball.setDensity(0.001 * (level)); 
+                
+                ball.setDisplaySize(ballData.radius * 2, ballData.radius * 2);
+                
+                ball.setData('level', level);
+                ball.setData('isMerging', false);
+                ball.setData('spawnTime', this.time.now);
+                
+                activeBalls.push(ball);
+                return ball;
+            }
+
+            setupCollisions() {
+                this.matter.world.on('collisionstart', (event) => {
+                    if (isGameOver) return;
+
+                    const pairs = event.pairs;
+
+                    for (let i = 0; i < pairs.length; i++) {
+                        const bodyA = pairs[i].bodyA;
+                        const bodyB = pairs[i].bodyB;
+
+                        if (bodyA.gameObject && bodyB.gameObject) {
+                            const objA = bodyA.gameObject;
+                            const objB = bodyB.gameObject;
+
+                            if (objA.getData && objB.getData && objA.getData('level') && objB.getData('level')) {
+                                const levelA = objA.getData('level');
+                                const levelB = objB.getData('level');
+
+                                if (levelA === levelB && !objA.getData('isMerging') && !objB.getData('isMerging')) {
+                                    objA.setData('isMerging', true);
+                                    objB.setData('isMerging', true);
+                                    
+                                    this.mergeBalls(objA, objB, levelA);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            mergeBalls(ballA, ballB, level) {
+                const midX = (ballA.x + ballB.x) / 2;
+                const midY = (ballA.y + ballB.y) / 2;
+
+                activeBalls = activeBalls.filter(b => b !== ballA && b !== ballB);
+
+                ballA.destroy();
+                ballB.destroy();
+
+                this.createMergeParticles(midX, midY, level);
+                this.addScore(level);
+
+                if (level < 11) {
+                    this.createBall(midX, midY, level + 1);
+                } else {
+                    this.createBall(midX, midY, 11);
+                }
+            }
+
+            createMergeParticles(x, y, level) {
+                const colors = [0xff8e8b, 0x79d2c2, 0xffd166, 0xef476f, 0x118ab2];
+                const color = colors[level % colors.length];
+
+                const emitter = this.add.particles(x, y, 'particle_base', {
+                    speed: { min: 50, max: 200 },
+                    angle: { min: 0, max: 360 },
+                    scale: { start: 1.5, end: 0 },
+                    tint: color,
+                    lifespan: 600,
+                    gravityY: 300,
+                    quantity: 15 + level * 2,
+                    blendMode: 'ADD'
+                });
+
+                this.time.delayedCall(1000, () => {
+                    emitter.destroy();
+                });
+            }
+
+            addScore(level) {
+                const scoreToAdd = BALLS[level - 1].score;
+                currentScore += scoreToAdd;
+                
+                this.updateScoreUI();
+
+                const scoreText = this.add.text(lastPointerX, DROP_LINE_Y, `+${scoreToAdd}`, {
+                    fontFamily: 'Pretendard',
+                    fontSize: '24px',
+                    color: '#ff8e8b',
+                    stroke: '#ffffff',
+                    strokeThickness: 4,
+                    fontWeight: 'bold'
+                }).setOrigin(0.5);
+
+                this.tweens.add({
+                    targets: scoreText,
+                    y: scoreText.y - 50,
+                    alpha: 0,
+                    duration: 800,
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => scoreText.destroy()
+                });
+            }
+
+            updateScoreUI() {
+                document.getElementById('current-score').innerText = currentScore;
+                
+                if (currentScore > bestScore) {
+                    bestScore = currentScore;
+                    setBestScore(bestScore);
+                }
+                document.getElementById('best-score').innerText = bestScore;
+            }
+
+            checkGameOver(time) {
+                const velocityThreshold = 0.5; 
+                
+                for (let i = 0; i < activeBalls.length; i++) {
+                    const ball = activeBalls[i];
+                    
+                    if (time - ball.getData('spawnTime') > 1500) {
+                        const ballTop = ball.y - BALLS[ball.getData('level') - 1].radius;
+                        
+                        if (ballTop < DROP_LINE_Y) {
+                            if (Math.abs(ball.body.velocity.y) < velocityThreshold && Math.abs(ball.body.velocity.x) < velocityThreshold) {
+                                
+                                if (!ball.getData('dangerStartTime')) {
+                                    ball.setData('dangerStartTime', time);
+                                } else {
+                                    if (time - ball.getData('dangerStartTime') > 1500) {
+                                        this.endGame();
+                                        return; 
+                                    }
+                                }
+                            } else {
+                                ball.setData('dangerStartTime', null);
+                            }
+                        } else {
+                            ball.setData('dangerStartTime', null);
+                        }
+                    }
+                }
+            }
+
+            endGame() {
+                if (isGameOver) return;
+                isGameOver = true;
+
+                this.matter.world.pause();
+
+                const modal = document.getElementById('game-over-modal');
+                const modalScore = document.getElementById('modal-score');
+                
+                modalScore.innerText = currentScore;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        const config = {
+            type: Phaser.AUTO,
+            parent: 'game-container',
+            width: GAME_WIDTH,
+            height: GAME_HEIGHT,
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
+            backgroundColor: '#eef7fd',
+            physics: {
+                default: 'matter',
+                matter: {
+                    gravity: { y: 1.5 },
+                    debug: false
+                }
+            },
+            scene: [MainScene]
+        };
+
+        // 브라우저 및 iframe 로딩이 완벽히 끝난 후 Phaser를 시작하도록 보장
+        window.onload = function () {
+            let game = new Phaser.Game(config);
+
+            const restartBtn = document.getElementById('restart-btn');
+            const modalRestartBtn = document.getElementById('modal-restart-btn');
+            const modal = document.getElementById('game-over-modal');
+
+            document.getElementById('best-score').innerText = getBestScore();
+
+            const restartGame = () => {
+                modal.classList.add('hidden');
+                const scene = game.scene.keys.MainScene;
+                scene.scene.restart();
+            };
+
+            restartBtn.addEventListener('click', restartGame);
+            modalRestartBtn.addEventListener('click', restartGame);
+        };
+    </script>
+</body>
+</html>
