@@ -102,7 +102,6 @@ function initFirebase() {
     db = getFirestore(app);
     firebaseEnabled = true;
   } catch (e) {
-  alert('Firebase 초기화 실패: ' + (e.code || '') + ' / ' + e.message);
   console.warn('[큐플] Firebase 초기화 실패:', e);
   showEmptyRanking();
 }
@@ -714,36 +713,34 @@ function gameLoop() {
 // Firebase 저장
 // ====================================================
 async function saveToFirebase() {
-  alert('Firebase 저장 시도 들어옴');
+  if (!firebaseEnabled || !db) return;
 
-  if (!firebaseEnabled || !db) {
-    alert('Firebase 연결 안 됨: firebaseEnabled=' + firebaseEnabled + ', db=' + !!db);
-    return;
-  }
   try {
-    const docRef   = doc(db, 'scores', playerId);
+    const docRef = doc(db, 'scores', playerId);
     const existing = await getDoc(docRef);
-    let fs = score, fwm = watermelonCount;
+
+    let fs = score;
+    let fwm = watermelonCount;
+
     if (existing.exists()) {
       const d = existing.data();
       fs  = Math.max(score, d.score || 0);
       fwm = Math.max(watermelonCount, d.watermelonCount || 0);
     }
+
     await setDoc(docRef, {
-  playerId,
-  nickname,
-  score: fs,
-  watermelonCount: fwm,
-  updatedAt: serverTimestamp(),
-});
+      playerId,
+      nickname,
+      score: fs,
+      watermelonCount: fwm,
+      updatedAt: serverTimestamp(),
+    });
 
-alert('Firebase 저장 성공');
+    await loadRanking();
 
-await loadRanking();
   } catch (e) {
-  alert('Firebase 저장 실패: ' + (e.code || '') + ' / ' + e.message);
-  console.warn('[큐플] Firebase 저장 실패:', e);
-}
+    console.warn('[큐플] Firebase 저장 실패:', e);
+  }
 }
 
 // ====================================================
