@@ -282,7 +282,7 @@ function createBall(x, y, level, fromMerge = false) {
   const body = Bodies.circle(x, y, radius, {
   restitution:    0,
   friction:       1,
-  frictionAir:    0.003,
+  frictionAir: 0.0015,
   frictionStatic: 0.5,
   density:        0.001 + level * 0.0002,
   label:          'ball',
@@ -386,7 +386,7 @@ function checkProximityMerges() {
       const minD = BALL_RADII[lvA - 1] + BALL_RADII[lvB - 1];
 
       // 닿거나 약간 겹치면 합체 (tolerance 3px)
-      if (dist <= minD + 8) {
+      if (dist <= minD + 4) {
   processMergePair(a, b);
 }
     }
