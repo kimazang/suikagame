@@ -291,12 +291,12 @@ function createBall(x, y, level, fromMerge = false) {
 
   ballIdCnt++;
   body.gameData = {
-    level,
-    uid:       ballIdCnt,
-    isMerging: false,
-    spawnTime: Date.now(),
-    popScale:  fromMerge ? 0.1 : 1.0,
-  };
+  level,
+  uid:       ballIdCnt,
+  isMerging: false,
+  spawnTime: Date.now(),
+  popScale:  1.0,
+};
 
   World.add(world, body);
   activeBodies.push(body);
@@ -386,9 +386,9 @@ function checkProximityMerges() {
       const minD = BALL_RADII[lvA - 1] + BALL_RADII[lvB - 1];
 
       // 닿거나 약간 겹치면 합체 (tolerance 3px)
-      if (dist <= minD + 3) {
-        processMergePair(a, b);
-      }
+      if (dist <= minD + 8) {
+  processMergePair(a, b);
+}
     }
   }
 }
@@ -558,7 +558,7 @@ ctx.clip();
 
     ctx.save();
     ctx.translate(safeX, DROP_Y);
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 0.1;
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.closePath();
