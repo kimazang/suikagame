@@ -633,8 +633,8 @@ async function endGame() {
     wrap.classList.add('shake-hard');
 
     setTimeout(() => {
-      wrap.classList.remove('shake-hard');
-    }, 700);
+  wrap.classList.remove('shake-hard');
+}, 2100);
   }
 
   const prevBest = lsGetInt(LS.BEST_SCORE, 0);
@@ -658,7 +658,7 @@ async function endGame() {
   // 진동을 먼저 보여준 뒤 게임오버 모달 표시
   setTimeout(() => {
     showGameoverModal(scoreUpdated, wmUpdated);
-  }, 650);
+  }, 2000);
 
   if (firebaseEnabled && nickname && (scoreUpdated || wmUpdated)) {
     await saveToFirebase();
