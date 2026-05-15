@@ -660,21 +660,11 @@ async function endGame() {
     showGameoverModal(scoreUpdated, wmUpdated);
   }, 1400);
 
-  alert(
-  '저장 조건 확인\n' +
-  'firebaseEnabled=' + firebaseEnabled + '\n' +
-  'nickname=' + nickname + '\n' +
-  'scoreUpdated=' + scoreUpdated + '\n' +
-  'wmUpdated=' + wmUpdated + '\n' +
-  'score=' + score + '\n' +
-  'bestScore=' + bestScore
-);
 
 if (firebaseEnabled && nickname && (scoreUpdated || wmUpdated)) {
   await saveToFirebase();
 }
   }
-}
 
 // ====================================================
 // 재시작
