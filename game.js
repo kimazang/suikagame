@@ -35,10 +35,10 @@ const FIREBASE_CONFIG = {
 // ====================================================
 // [B] 게임 상수 (여기서 수정)
 // ====================================================
-const BOARD_WIDTH  = 460;
-const BOARD_HEIGHT = 640;
-const DANGER_Y     = 95;   // 게임오버 판정 Y
-const DROP_Y       = 55;   // 공 시작 Y
+const BOARD_WIDTH  = 544;
+const BOARD_HEIGHT = 708;
+const DANGER_Y     = 115;  // 게임오버 판정 Y
+const DROP_Y       = 80;   // 공 시작 Y
 const DROP_COOLDOWN = 550; // 드롭 후 쿨다운 ms
 
 // 이미지 URL (여기서 수정)
@@ -57,17 +57,18 @@ const BALL_IMAGES = [
 ];
 
 // 단계별 반지름 (여기서 수정)
-const BALL_RADII = [18, 24, 32, 42, 54, 68, 84, 102, 124, 150, 178];
+const BALL_RADII = [20, 26, 34, 44, 56, 70, 86, 104, 126, 148, 172];
 
 // 합체 점수 (새로 생성된 단계 기준, 여기서 수정)
 const MERGE_SCORES = [0, 2, 6, 15, 36, 78, 160, 325, 660, 1350, 2800];
 
 // 드롭 확률 [단계, 누적확률]
 const DROP_WEIGHTS = [
-  [1, 0.45],
-  [2, 0.75],
-  [3, 0.93],
-  [4, 1.00],
+  [1, 0.20],
+  [2, 0.40],
+  [3, 0.60],
+  [4, 0.80],
+  [5, 1.00],
 ];
 
 // localStorage 키
@@ -243,12 +244,12 @@ function initPhysics() {
   world  = engine.world;
   engine.gravity.y = 1.5;
 
-  const opt = { isStatic: true, friction: 0.5, restitution: 0.05, label: 'wall' };
-  World.add(world, [
-    Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
-    Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-    Bodies.rectangle(BOARD_WIDTH + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-  ]);
+  const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
+World.add(world, [
+  Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
+  Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
+  Bodies.rectangle(BOARD_WIDTH + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
+]);
 
   // [4] 합체 버그 수정: collisionStart + collisionActive 둘 다 사용
   Events.on(engine, 'collisionStart',  onCollision);
@@ -278,17 +279,15 @@ function randomDropLevel() {
 // ====================================================
 function createBall(x, y, level, fromMerge = false) {
   const radius = BALL_RADII[level - 1];
-  const body   = Bodies.circle(x, y, radius, {
-    restitution:    0.2,
-    friction:       0.8,
-    frictionAir:    0.01,
-    frictionStatic: 0.5,
-    density:        0.001 + level * 0.0002,
-    inertia:        Infinity,  // 회전 고정
-    inverseInertia: 0,
-    label:          'ball',
-    slop:           0.05,
-  });
+  const body = Bodies.circle(x, y, radius, {
+  restitution:    0,
+  friction:       1,
+  frictionAir:    0.003,
+  frictionStatic: 0.5,
+  density:        0.001 + level * 0.0002,
+  label:          'ball',
+  slop:           0.05,
+});
 
   ballIdCnt++;
   body.gameData = {
