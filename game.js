@@ -23,13 +23,14 @@ import { getFirestore, doc, setDoc, getDoc,
 // [A] FIREBASE CONFIG — 여기에 입력하세요
 // apiKey가 비어 있으면 Firebase 비활성화됩니다.
 // ====================================================
-const FIREBASE_CONFIG = {
-  apiKey:            "",
-  authDomain:        "",
-  projectId:         "",
-  storageBucket:     "",
-  messagingSenderId: "",
-  appId:             ""
+const firebaseConfig = {
+  apiKey: "AIzaSyDIdgkLu5IssN4tvSzRO3d-XFxU2Q4AmU4",
+  authDomain: "qplay-suika-game.firebaseapp.com",
+  projectId: "qplay-suika-game",
+  storageBucket: "qplay-suika-game.firebasestorage.app",
+  messagingSenderId: "37069901682",
+  appId: "1:37069901682:web:9a17bec050c9102af797eb",
+  measurementId: "G-WV7HV9VG6E"
 };
 
 // ====================================================
