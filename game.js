@@ -103,9 +103,10 @@ function initFirebase() {
     db = getFirestore(app);
     firebaseEnabled = true;
   } catch (e) {
-    console.warn('[큐플] Firebase 초기화 실패:', e);
-    showEmptyRanking();
-  }
+  alert('Firebase 초기화 실패: ' + (e.code || '') + ' / ' + e.message);
+  console.warn('[큐플] Firebase 초기화 실패:', e);
+  showEmptyRanking();
+}
 }
 
 // ====================================================
@@ -703,7 +704,12 @@ function gameLoop() {
 // Firebase 저장
 // ====================================================
 async function saveToFirebase() {
-  if (!firebaseEnabled || !db) return;
+  alert('Firebase 저장 시도 들어옴');
+
+  if (!firebaseEnabled || !db) {
+    alert('Firebase 연결 안 됨: firebaseEnabled=' + firebaseEnabled + ', db=' + !!db);
+    return;
+  }
   try {
     const docRef   = doc(db, 'scores', playerId);
     const existing = await getDoc(docRef);
@@ -719,7 +725,10 @@ async function saveToFirebase() {
       updatedAt: serverTimestamp(),
     });
     await loadRanking();
-  } catch (e) { console.warn('[큐플] Firebase 저장 실패:', e); }
+  } catch (e) {
+  alert('Firebase 저장 실패: ' + (e.code || '') + ' / ' + e.message);
+  console.warn('[큐플] Firebase 저장 실패:', e);
+}
 }
 
 // ====================================================
