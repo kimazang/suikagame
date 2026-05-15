@@ -618,19 +618,44 @@ async function endGame() {
   if (gameOver) return;
   gameOver = true;
 
+  // 게임판 덜덜 진동
+  const wrap = document.getElementById('canvas-wrap');
+  if (wrap) {
+    wrap.classList.remove('shake-hard');
+    void wrap.offsetWidth; // 애니메이션 재시작용
+    wrap.classList.add('shake-hard');
+
+    setTimeout(() => {
+      wrap.classList.remove('shake-hard');
+    }, 700);
+  }
+
   const prevBest = lsGetInt(LS.BEST_SCORE, 0);
   const prevBestWm = lsGetInt(LS.BEST_WATERMELON, 0);
   let scoreUpdated = false, wmUpdated = false;
 
-  if (score > prevBest)             { lsSet(LS.BEST_SCORE, score); bestScore = score; scoreUpdated = true; }
-  if (watermelonCount > prevBestWm) { lsSet(LS.BEST_WATERMELON, watermelonCount); bestWatermelonCount = watermelonCount; wmUpdated = true; }
+  if (score > prevBest) {
+    lsSet(LS.BEST_SCORE, score);
+    bestScore = score;
+    scoreUpdated = true;
+  }
+
+  if (watermelonCount > prevBestWm) {
+    lsSet(LS.BEST_WATERMELON, watermelonCount);
+    bestWatermelonCount = watermelonCount;
+    wmUpdated = true;
+  }
+
+  updateScoreUI();
+
+  // 진동을 먼저 보여준 뒤 게임오버 모달 표시
+  setTimeout(() => {
+    showGameoverModal(scoreUpdated, wmUpdated);
+  }, 650);
 
   if (firebaseEnabled && nickname && (scoreUpdated || wmUpdated)) {
     await saveToFirebase();
   }
-
-  updateScoreUI();
-  showGameoverModal(scoreUpdated, wmUpdated);
 }
 
 // ====================================================
