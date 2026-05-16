@@ -7,7 +7,7 @@
  * 4. 쿨다운: 600ms
  * 5. 물리: frictionAir/frictionStatic/density/slop 제거 (레퍼런스와 동일)
  * 6. DROP_Y: 80px (레퍼런스 원본)
- * 7. 첫 공: 랜덤 (1단계 고정 해제)
+ * 7. 첫 공: 1단계 고정 (레퍼런스 동일, fruit0 고정)
  * 8. 합체 위치: bodyA 기준 (중점 → A위치)
  * 9. 게임오버 모달: shake 완료(900ms) 후 표시
  * 10. 합체 시 팝 애니메이션: popScale 0.3에서 시작
@@ -689,8 +689,8 @@ function restartGame() {
   clearAllBalls();
   hideGameoverModal();
 
-  // 레퍼런스: 재시작 후 첫 공도 랜덤
-  currentLv = randomDropLevel();
+  // 레퍼런스 동일: 재시작 후 첫 공도 1단계 고정
+  currentLv = 1;
   nextLv    = randomDropLevel();
   dropX     = BOARD_WIDTH / 2;
 
@@ -987,8 +987,8 @@ async function init() {
   if (!nickname) { showNicknameModal(); }
   else { updatePlayerDisplay(); }
 
-  // 레퍼런스: 첫 공도 랜덤 (1~5단계)
-  currentLv = randomDropLevel();
+  // 레퍼런스 동일: 첫 공은 항상 1단계(fruit0) 고정, 다음 공만 랜덤
+  currentLv = 1;
   nextLv    = randomDropLevel();
 
   updateScoreUI();
