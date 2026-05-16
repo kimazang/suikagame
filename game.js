@@ -432,9 +432,10 @@ function mergeBalls(a, b, level) {
   const newLevel    = level + 1;
   const isWatermelon = newLevel === 11;
 
-  // 레퍼런스: 합체된 새 공 단계(newLevel) 기준 → MERGE_SCORES[newLevel-1]
-  // fruit0(1단계)로 합쳐지면 +1, fruit10(11단계)면 +66
-  score += MERGE_SCORES[newLevel - 1];
+  // 레퍼런스: updateScore(합체 전 공의 key) 기준
+  // fruit0+fruit0 → level=1 → MERGE_SCORES[0] = +1
+  // fruit9+fruit9 → level=10 → MERGE_SCORES[9] = +55
+  score += MERGE_SCORES[level - 1];
   if (score > bestScore) bestScore = score;
 
   if (isWatermelon) {
@@ -488,24 +489,96 @@ function toGameX(clientX) {
 }
 
 function renderFrame() {
-  // [1] 배경: 밝은 하늘색
-  ctx.fillStyle = '#d6eeff';
+  // ── 박스 레이아웃 상수 ──
+  const BOX_SIDE  = 18;  // 측면 두께 (3D 입체감)
+  const BOX_BOT   = 22;  // 하단 두께
+  const BOX_TOP   = DANGER_Y; // 박스 상단 = 게임오버 라인
+
+  // [1] 전체 배경 (캔버스 외곽)
+  ctx.fillStyle = '#5ab8e0';
   ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
 
-  // 게임오버 라인
+  // [2] 박스 바깥 테두리 (진한 파란색)
+  const outerR = 12;
   ctx.save();
-  ctx.strokeStyle = 'rgba(229, 57, 53, 0.6)';
+  ctx.fillStyle = '#1a88cc';
+  roundRect(ctx, 0, BOX_TOP - 6, BOARD_WIDTH, BOARD_HEIGHT - BOX_TOP + 6, outerR);
+  ctx.fill();
+  ctx.restore();
+
+  // [3] 박스 측면 (입체감 — 약간 어두운 파란색)
+  // 왼쪽 측면
+  ctx.save();
+  ctx.fillStyle = '#2299cc';
+  ctx.beginPath();
+  ctx.moveTo(0, BOX_TOP - 6);
+  ctx.lineTo(BOX_SIDE, BOX_TOP + BOX_SIDE - 2);
+  ctx.lineTo(BOX_SIDE, BOARD_HEIGHT - BOX_BOT + BOX_SIDE - 4);
+  ctx.lineTo(0, BOARD_HEIGHT - BOX_BOT + BOX_SIDE + 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // 오른쪽 측면
+  ctx.save();
+  ctx.fillStyle = '#2299cc';
+  ctx.beginPath();
+  ctx.moveTo(BOARD_WIDTH, BOX_TOP - 6);
+  ctx.lineTo(BOARD_WIDTH - BOX_SIDE, BOX_TOP + BOX_SIDE - 2);
+  ctx.lineTo(BOARD_WIDTH - BOX_SIDE, BOARD_HEIGHT - BOX_BOT + BOX_SIDE - 4);
+  ctx.lineTo(BOARD_WIDTH, BOARD_HEIGHT - BOX_BOT + BOX_SIDE + 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // 하단 측면
+  ctx.save();
+  ctx.fillStyle = '#1577aa';
+  ctx.beginPath();
+  ctx.moveTo(0, BOARD_HEIGHT);
+  ctx.lineTo(BOX_SIDE, BOARD_HEIGHT - BOX_BOT + BOX_SIDE - 4);
+  ctx.lineTo(BOARD_WIDTH - BOX_SIDE, BOARD_HEIGHT - BOX_BOT + BOX_SIDE - 4);
+  ctx.lineTo(BOARD_WIDTH, BOARD_HEIGHT);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // [4] 안쪽 플레이 영역 (연한 크림-파란색)
+  ctx.save();
+  ctx.fillStyle = '#e8f5ff';
+  ctx.fillRect(BOX_SIDE, BOX_TOP + BOX_SIDE - 2,
+    BOARD_WIDTH - BOX_SIDE * 2,
+    BOARD_HEIGHT - BOX_BOT - BOX_TOP - BOX_SIDE + 6);
+  ctx.restore();
+
+  // [5] DANGER 경고선 (박스 상단 안쪽 — 점선)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(229, 57, 53, 0.7)';
   ctx.lineWidth   = 2;
   ctx.setLineDash([10, 7]);
   ctx.beginPath();
-  ctx.moveTo(0, DANGER_Y);
-  ctx.lineTo(BOARD_WIDTH, DANGER_Y);
+  ctx.moveTo(BOX_SIDE, DANGER_Y);
+  ctx.lineTo(BOARD_WIDTH - BOX_SIDE, DANGER_Y);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.font      = '11px sans-serif';
-  ctx.fillStyle = 'rgba(229,57,53,0.6)';
-  ctx.fillText('DANGER', 6, DANGER_Y - 5);
+  ctx.font      = 'bold 11px sans-serif';
+  ctx.fillStyle = 'rgba(229,57,53,0.75)';
+  ctx.fillText('DANGER', BOX_SIDE + 6, DANGER_Y - 5);
   ctx.restore();
+
+  // [6] 플레이 영역 클리핑 시작 (공이 박스 밖으로 안 나오게)
+  const BOX_SIDE  = 18;
+  const BOX_BOT   = 22;
+  const BOX_TOP   = DANGER_Y;
+  const playX = BOX_SIDE;
+  const playY = BOX_TOP + BOX_SIDE - 2;
+  const playW = BOARD_WIDTH - BOX_SIDE * 2;
+  const playH = BOARD_HEIGHT - BOX_BOT - BOX_TOP - BOX_SIDE + 6;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(playX, playY, playW, playH);
+  ctx.clip();
 
   // 합체 파동 효과
   const now = Date.now();
@@ -572,41 +645,63 @@ ctx.clip();
     ctx.restore();
   });
 
-  // [3] 세로 가이드 라인 제거 → 미리보기 공만 표시 (세로선 없음)
-  // [3] 떨어지기 전 대기 공 표시
-if (canDrop && !gameOver) {
-  const lv     = currentLv;
-  const radius = BALL_RADII[lv - 1];
-  const img    = imgs[lv - 1];
-  const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
+  ctx.restore(); // 클리핑 해제
 
+  // [7] 박스 상단 테두리 오버레이 (공 위에 덮어서 박스 안에 있는 느낌)
+  // 상단 바 (DANGER_Y 위쪽 영역 가리기)
   ctx.save();
-
-  // ★ 절대 흐리지 않게: 완전 불투명
-  ctx.globalAlpha = 1;
-  ctx.translate(safeX, DROP_Y);
-  ctx.rotate(0);
-  ctx.scale(1, 1);
-
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.clip();
-
-  if (img && img.complete && img.naturalWidth > 0) {
-    ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
-  } else {
-    ctx.fillStyle = FALLBACK_COLORS[lv - 1];
-    ctx.fill();
-  }
-
+  ctx.fillStyle = '#5ab8e0';
+  ctx.fillRect(0, 0, BOARD_WIDTH, BOX_TOP - 6);
+  // 상단 박스 테두리 바
+  ctx.fillStyle = '#1a88cc';
+  ctx.fillRect(0, BOX_TOP - 6, BOARD_WIDTH, BOX_SIDE + 4);
+  // 안쪽 밝은 하이라이트 선
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillRect(BOX_SIDE, BOX_TOP - 2, BOARD_WIDTH - BOX_SIDE * 2, 3);
   ctx.restore();
-}
+
+  // [8] 대기 공 표시 (박스 상단 위, DANGER_Y 위쪽)
+  if (canDrop && !gameOver) {
+    const lv     = currentLv;
+    const radius = BALL_RADII[lv - 1];
+    const img    = imgs[lv - 1];
+    const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
+
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.translate(safeX, DROP_Y);
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+    } else {
+      ctx.fillStyle = FALLBACK_COLORS[lv - 1];
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 
   if (gameOver) {
     ctx.fillStyle = 'rgba(200,230,255,0.4)';
     ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
   }
+}
+
+// ── 모서리 둥근 사각형 헬퍼 ──
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
 }
 
 // ====================================================
