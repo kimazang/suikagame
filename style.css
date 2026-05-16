@@ -273,7 +273,7 @@ body {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 0 0 3px var(--border), var(--shadow-lg);
-  background: #d6eeff;
+  background: #5ab8e0;
   line-height: 0;
 }
 #game-canvas {
