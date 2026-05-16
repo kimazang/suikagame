@@ -37,8 +37,8 @@ const FIREBASE_CONFIG = {
 // ====================================================
 const BOARD_WIDTH  = 544;
 const BOARD_HEIGHT = 708;
-const DANGER_Y     = 120;  // 게임오버 판정 Y
-const DROP_Y       = 80;   // 공 시작 Y
+const DANGER_Y     = 68;   // 게임오버 판정 Y (레퍼런스 비율 기준: 70/724 * 708 ≈ 68px)
+const DROP_Y       = 50;   // 공 시작 Y
 const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms (레퍼런스 0x258 = 600)
 
 // 이미지 URL (여기서 수정)
@@ -344,7 +344,7 @@ function checkDangerCollision(a, b) {
   if (now - a.gameData.spawnTime < 1000) return;
   if (now - b.gameData.spawnTime < 1000) return;
 
-  const GAME_OVER_Y = 70; // 레퍼런스 원본: 0x46 = 70px
+  const GAME_OVER_Y = 68; // 레퍼런스 비율 환산값 (원본 70/724 * 708 ≈ 68px)
   const topA = a.position.y - BALL_RADII[a.gameData.level - 1];
   const topB = b.position.y - BALL_RADII[b.gameData.level - 1];
 
