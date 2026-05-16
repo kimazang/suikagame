@@ -39,13 +39,12 @@ const FIREBASE_CONFIG = {
 // [B] 게임 상수 (여기서 수정)
 // ====================================================
 const BOARD_WIDTH  = 544;
-const BOARD_HEIGHT = 634; // 박스 바닥에 맞춤 (원본 584/652 * 708)
-// 박스 이미지 안쪽 경계 (579x652 → 544x708 비율 환산)
-const BOX_LEFT   = 48;   // 렌더링용 (evenodd 클리핑)
-const BOX_RIGHT  = 495;  // 렌더링용
-const BOX_BOTTOM = 634;  // 렌더링용
-const DANGER_Y   = 59;   // 게임오버 판정 Y (박스 상단 안쪽 선)
-const DROP_Y     = 35;   // 공 시작 Y
+const BOARD_HEIGHT = 612; // 박스 이미지(579x652) 비율 유지
+const BOX_LEFT   = 49;   // 클리핑용
+const BOX_RIGHT  = 494;  // 클리핑용
+const BOX_BOTTOM = 548;  // 클리핑용 (바닥)
+const DANGER_Y   = 51;   // 게임오버 판정 Y (박스 상단 안쪽 선)
+const DROP_Y     = 28;   // 공 시작 Y
 const DROP_COOLDOWN = 600;
 
 // 이미지 URL (여기서 수정)
@@ -256,12 +255,12 @@ function initPhysics() {
 
   const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
   World.add(world, [
-    // 바닥
-    Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
-    // 왼쪽 벽
-    Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-    // 오른쪽 벽
-    Bodies.rectangle(BOARD_WIDTH + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
+    // 바닥 — 박스 안쪽 바닥
+    Bodies.rectangle(BOARD_WIDTH / 2, BOX_BOTTOM + 25, BOARD_WIDTH, 50, opt),
+    // 왼쪽 벽 — 박스 안쪽 왼쪽 면
+    Bodies.rectangle(BOX_LEFT - 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
+    // 오른쪽 벽 — 박스 안쪽 오른쪽 면
+    Bodies.rectangle(BOX_RIGHT + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
   ]);
 
   // [4] 합체 버그 수정: collisionStart + collisionActive 둘 다 사용
@@ -358,7 +357,7 @@ function checkDangerCollision(a, b) {
   if (now - a.gameData.spawnTime < 1000) return;
   if (now - b.gameData.spawnTime < 1000) return;
 
-  const GAME_OVER_Y = DANGER_Y; // 박스 상단 안쪽 선과 동일
+  const GAME_OVER_Y = DANGER_Y;
   const topA = a.position.y - BALL_RADII[a.gameData.level - 1];
   const topB = b.position.y - BALL_RADII[b.gameData.level - 1];
 
