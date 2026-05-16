@@ -567,9 +567,6 @@ function renderFrame() {
   ctx.restore();
 
   // [6] 플레이 영역 클리핑 시작 (공이 박스 밖으로 안 나오게)
-  const BOX_SIDE  = 18;
-  const BOX_BOT   = 22;
-  const BOX_TOP   = DANGER_Y;
   const playX = BOX_SIDE;
   const playY = BOX_TOP + BOX_SIDE - 2;
   const playW = BOARD_WIDTH - BOX_SIDE * 2;
