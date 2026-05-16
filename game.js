@@ -40,9 +40,13 @@ const FIREBASE_CONFIG = {
 // ====================================================
 const BOARD_WIDTH  = 544;
 const BOARD_HEIGHT = 708;
-const DANGER_Y     = 68;   // 게임오버 판정 Y (레퍼런스 비율 기준: 70/724 * 708 ≈ 68px)
-const DROP_Y       = 80;   // 공 시작 Y (레퍼런스: 0x50 = 80px)
-const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms (레퍼런스 0x258 = 600)
+// 박스 이미지 안쪽 경계 (579x652 → 544x708 비율 환산)
+const BOX_LEFT   = 48;   // 왼쪽 벽
+const BOX_RIGHT  = 495;  // 오른쪽 벽
+const BOX_BOTTOM = 634;  // 바닥
+const DANGER_Y   = 59;   // 게임오버 판정 Y (박스 상단 안쪽 선)
+const DROP_Y     = 35;   // 공 시작 Y (박스 위에서 대기)
+const DROP_COOLDOWN = 600;
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
@@ -217,19 +221,26 @@ function playMergeSound(level) {
 // 이미지 로드
 // ====================================================
 const imgs = new Array(11).fill(null);
+let boxImg = null;
 
 function loadImages() {
-  return Promise.all(
-    BALL_IMAGES.map((url, i) =>
-      new Promise(resolve => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload  = () => { imgs[i] = img; resolve(); };
-        img.onerror = () => { imgs[i] = null; resolve(); };
-        img.src = url;
-      })
-    )
+  const ballPromises = BALL_IMAGES.map((url, i) =>
+    new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload  = () => { imgs[i] = img; resolve(); };
+      img.onerror = () => { imgs[i] = null; resolve(); };
+      img.src = url;
+    })
   );
+  const boxPromise = new Promise(resolve => {
+    boxImg = new Image();
+    boxImg.crossOrigin = 'anonymous';
+    boxImg.onload  = () => resolve();
+    boxImg.onerror = () => resolve();
+    boxImg.src = 'https://raw.githubusercontent.com/kimazang/suikagame/main/box.png';
+  });
+  return Promise.all([...ballPromises, boxPromise]);
 }
 
 // ====================================================
@@ -244,11 +255,15 @@ function initPhysics() {
   engine.gravity.y = 1.5;
 
   const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
-World.add(world, [
-  Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
-  Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-  Bodies.rectangle(BOARD_WIDTH + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-]);
+  const wallW = 50;
+  World.add(world, [
+    // 바닥 — 박스 바닥에 맞춤
+    Bodies.rectangle((BOX_LEFT + BOX_RIGHT) / 2, BOX_BOTTOM + wallW / 2, BOX_RIGHT - BOX_LEFT, wallW, opt),
+    // 왼쪽 벽
+    Bodies.rectangle(BOX_LEFT - wallW / 2, BOARD_HEIGHT / 2, wallW, BOARD_HEIGHT * 2, opt),
+    // 오른쪽 벽
+    Bodies.rectangle(BOX_RIGHT + wallW / 2, BOARD_HEIGHT / 2, wallW, BOARD_HEIGHT * 2, opt),
+  ]);
 
   // [4] 합체 버그 수정: collisionStart + collisionActive 둘 다 사용
   Events.on(engine, 'collisionStart',  onCollision);
@@ -304,7 +319,7 @@ function dropBall() {
 
   const lv     = currentLv;
   const radius = BALL_RADII[lv - 1];
-  const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
+  const safeX  = Math.max(BOX_LEFT + radius + 1, Math.min(BOX_RIGHT - radius - 1, dropX));
 
   createBall(safeX, DROP_Y, lv, false);
   playDropSound(); // [7] 드롭 효과음
@@ -489,25 +504,31 @@ function toGameX(clientX) {
 }
 
 function renderFrame() {
-  // 배경 (박스 안쪽 크림색)
-  ctx.fillStyle = '#fff9ee';
-  ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+  // [1] 박스 이미지를 배경으로 먼저 그리기
+  if (boxImg && boxImg.complete && boxImg.naturalWidth > 0) {
+    ctx.drawImage(boxImg, 0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+  } else {
+    // 박스 이미지 없으면 크림색 배경
+    ctx.fillStyle = '#fff9ee';
+    ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+  }
 
-  // DANGER 경고선
+  // [2] DANGER 경고선 (박스 상단 안쪽 선 위치)
   ctx.save();
   ctx.strokeStyle = 'rgba(229, 57, 53, 0.6)';
   ctx.lineWidth   = 2;
   ctx.setLineDash([10, 7]);
   ctx.beginPath();
-  ctx.moveTo(0, DANGER_Y);
-  ctx.lineTo(BOARD_WIDTH, DANGER_Y);
+  ctx.moveTo(BOX_LEFT, DANGER_Y);
+  ctx.lineTo(BOX_RIGHT, DANGER_Y);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.font      = 'bold 11px sans-serif';
   ctx.fillStyle = 'rgba(229,57,53,0.6)';
-  ctx.fillText('DANGER', 6, DANGER_Y - 5);
+  ctx.fillText('DANGER', BOX_LEFT + 6, DANGER_Y - 4);
   ctx.restore();
-  // 합체 파동 효과
+
+  // [3] 합체 파동 효과
   const now = Date.now();
   mergeEffects = mergeEffects.filter(eff => {
     const t = (now - eff.startTime) / eff.duration;
@@ -537,27 +558,23 @@ function renderFrame() {
     return true;
   });
 
-  // 공 렌더링
+  // [4] 공 렌더링
   Composite.allBodies(world).forEach(body => {
     if (body.label !== 'ball' || !body.gameData) return;
-
     const { level, popScale } = body.gameData;
     const radius = BALL_RADII[level - 1];
     const img    = imgs[level - 1];
     const { x, y } = body.position;
-
     if (popScale < 1) body.gameData.popScale = Math.min(1, popScale + 0.15);
     const scale = body.gameData.popScale;
-
     ctx.save();
-ctx.translate(x, y);
-ctx.rotate(body.angle);
-ctx.scale(scale, scale);
-ctx.beginPath();
-ctx.arc(0, 0, radius, 0, Math.PI * 2);
-ctx.closePath();
-ctx.clip();
-
+    ctx.translate(x, y);
+    ctx.rotate(body.angle);
+    ctx.scale(scale, scale);
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
     } else {
@@ -572,12 +589,27 @@ ctx.clip();
     ctx.restore();
   });
 
-  // 대기 공 표시
+  // [5] 박스 이미지를 다시 위에 덮기 — 테두리가 공 위에 보이게
+  if (boxImg && boxImg.complete && boxImg.naturalWidth > 0) {
+    // 테두리 부분만 덮기 위해 안쪽 클리핑 제외
+    ctx.save();
+    // 안쪽 플레이 영역을 구멍 뚫어서 테두리만 그리기
+    ctx.beginPath();
+    // 전체 캔버스
+    ctx.rect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+    // 안쪽 플레이 영역 (역방향 = 구멍)
+    ctx.rect(BOX_LEFT, DANGER_Y, BOX_RIGHT - BOX_LEFT, BOX_BOTTOM - DANGER_Y);
+    ctx.clip('evenodd');
+    ctx.drawImage(boxImg, 0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+    ctx.restore();
+  }
+
+  // [6] 대기 공 표시 (박스 위에서 대기)
   if (canDrop && !gameOver) {
     const lv     = currentLv;
     const radius = BALL_RADII[lv - 1];
     const img    = imgs[lv - 1];
-    const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
+    const safeX  = Math.max(BOX_LEFT + radius + 1, Math.min(BOX_RIGHT - radius - 1, dropX));
     ctx.save();
     ctx.globalAlpha = 1;
     ctx.translate(safeX, DROP_Y);
@@ -595,7 +627,7 @@ ctx.clip();
   }
 
   if (gameOver) {
-    ctx.fillStyle = 'rgba(200,230,255,0.4)';
+    ctx.fillStyle = 'rgba(255,249,238,0.5)';
     ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
   }
 }
