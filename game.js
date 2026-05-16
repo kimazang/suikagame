@@ -1,16 +1,13 @@
 /**
  * 큐플 합치기 — game.js
- * 레퍼런스(playsuikagame.com) 기준 수정 내역:
- * 1. 점수 체계: 삼각수 공식 [1,3,6,10,15,21,28,36,45,55,66]
- * 2. 사망 조건: 충돌 시 공 상단 68px 미만이면 즉시 게임오버
- * 3. 드롭 확률: 1~5단계 균등 랜덤 (가중치 제거)
- * 4. 쿨다운: 600ms
- * 5. 물리: frictionAir/frictionStatic/density/slop 제거 (레퍼런스와 동일)
- * 6. DROP_Y: 80px (레퍼런스 원본)
- * 7. 첫 공: 1단계 고정 (레퍼런스 동일, fruit0 고정)
- * 8. 합체 위치: bodyA 기준 (중점 → A위치)
- * 9. 게임오버 모달: shake 완료(900ms) 후 표시
- * 10. 합체 시 팝 애니메이션: popScale 0.3에서 시작
+ * 수정 내역:
+ * 1. UI: 큐플레이 스타일 밝은 테마
+ * 2. 진화의 고리: 서클 배치
+ * 3. 가이드 세로선 제거
+ * 4. 합체 버그 수정 (collisionActive + 근접 감지)
+ * 5. 첫 공 항상 1단계
+ * 6. 랭킹: 빈 슬롯 10개 표시
+ * 7. 효과음 추가 (Web Audio API)
  */
 
 // ====================================================
@@ -39,13 +36,10 @@ const FIREBASE_CONFIG = {
 // [B] 게임 상수 (여기서 수정)
 // ====================================================
 const BOARD_WIDTH  = 544;
-const BOARD_HEIGHT = 612; // 박스 이미지(579x652) 비율 유지
-const BOX_LEFT   = 49;   // 클리핑용
-const BOX_RIGHT  = 494;  // 클리핑용
-const BOX_BOTTOM = 548;  // 클리핑용 (바닥)
-const DANGER_Y   = 51;   // 게임오버 판정 Y (박스 상단 안쪽 선)
-const DROP_Y     = 28;   // 공 시작 Y
-const DROP_COOLDOWN = 600;
+const BOARD_HEIGHT = 708;
+const DANGER_Y     = 68;  // 게임오버 판정 Y
+const DROP_Y       = 80;   // 공 시작 Y
+const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
@@ -65,13 +59,10 @@ const BALL_IMAGES = [
 // 단계별 반지름 (여기서 수정)
 const BALL_RADII = [19, 25, 33, 43, 55, 69, 85, 103, 123, 145, 168];
 
-// 합체 점수 (레퍼런스 원본: 삼각수 n*(n+1)/2)
-// fruit0→+1, fruit1→+3, fruit2→+6, fruit3→+10, fruit4→+15,
-// fruit5→+21, fruit6→+28, fruit7→+36, fruit8→+45, fruit9→+55, fruit10→+66
+// 합체 점수 (새로 생성된 단계 기준, 여기서 수정)
 const MERGE_SCORES = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66];
 
-// 드롭 확률: 레퍼런스 원본과 동일하게 1~5단계 균등 확률
-// (레퍼런스: Math.floor(Math.random() * 5) → fruit0~fruit4)
+// 드롭 확률: 1~5단계 균등
 
 // localStorage 키
 const LS = {
@@ -220,26 +211,19 @@ function playMergeSound(level) {
 // 이미지 로드
 // ====================================================
 const imgs = new Array(11).fill(null);
-let boxImg = null;
 
 function loadImages() {
-  const ballPromises = BALL_IMAGES.map((url, i) =>
-    new Promise(resolve => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload  = () => { imgs[i] = img; resolve(); };
-      img.onerror = () => { imgs[i] = null; resolve(); };
-      img.src = url;
-    })
+  return Promise.all(
+    BALL_IMAGES.map((url, i) =>
+      new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload  = () => { imgs[i] = img; resolve(); };
+        img.onerror = () => { imgs[i] = null; resolve(); };
+        img.src = url;
+      })
+    )
   );
-  const boxPromise = new Promise(resolve => {
-    boxImg = new Image();
-    boxImg.crossOrigin = 'anonymous';
-    boxImg.onload  = () => resolve();
-    boxImg.onerror = () => resolve();
-    boxImg.src = 'https://raw.githubusercontent.com/kimazang/suikagame/main/box.png';
-  });
-  return Promise.all([...ballPromises, boxPromise]);
 }
 
 // ====================================================
@@ -254,14 +238,11 @@ function initPhysics() {
   engine.gravity.y = 1.5;
 
   const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
-  World.add(world, [
-    // 바닥 — 박스 안쪽 바닥
-    Bodies.rectangle(BOARD_WIDTH / 2, BOX_BOTTOM + 25, BOARD_WIDTH, 50, opt),
-    // 왼쪽 벽 — 박스 안쪽 왼쪽 면
-    Bodies.rectangle(BOX_LEFT - 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-    // 오른쪽 벽 — 박스 안쪽 오른쪽 면
-    Bodies.rectangle(BOX_RIGHT + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-  ]);
+World.add(world, [
+  Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
+  Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
+  Bodies.rectangle(BOARD_WIDTH + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
+]);
 
   // [4] 합체 버그 수정: collisionStart + collisionActive 둘 다 사용
   Events.on(engine, 'collisionStart',  onCollision);
@@ -276,10 +257,12 @@ function clearAllBalls() {
 }
 
 // ====================================================
-// 랜덤 단계 생성 (레퍼런스: 1~5단계 균등 확률)
+// 랜덤 단계 생성
 // ====================================================
 function randomDropLevel() {
   return Math.floor(Math.random() * 5) + 1;
+}
+  return 1;
 }
 
 // ====================================================
@@ -288,20 +271,23 @@ function randomDropLevel() {
 function createBall(x, y, level, fromMerge = false) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-    restitution: 0,       // setBounce(0)
-    friction:    1,       // setFriction(1)
-    label:       'ball',
-    // frictionAir, frictionStatic, density, slop → 레퍼런스에 없으므로 제거 (Matter.js 기본값 사용)
-  });
+  restitution:    0,
+  friction:       1,
+
+
+
+  label:          'ball',
+
+});
 
   ballIdCnt++;
   body.gameData = {
-    level,
-    uid:       ballIdCnt,
-    isMerging: false,
-    spawnTime: Date.now(),
-    popScale:  fromMerge ? 0.3 : 1.0, // 합체 시 팝 애니메이션
-  };
+  level,
+  uid:       ballIdCnt,
+  isMerging: false,
+  spawnTime: Date.now(),
+  popScale:  1.0,
+};
 
   World.add(world, body);
   activeBodies.push(body);
@@ -335,35 +321,7 @@ function dropBall() {
 // ====================================================
 function onCollision(event) {
   if (gameOver) return;
-  event.pairs.forEach(pair => {
-    // 사망 판정: 레퍼런스 원본과 동일
-    // 충돌하는 두 공 중 하나라도 상단이 DANGER_Y(70px) 위에 있으면 즉시 게임오버
-    checkDangerCollision(pair.bodyA, pair.bodyB);
-    // 합체 판정
-    processMergePair(pair.bodyA, pair.bodyB);
-  });
-}
-
-// 레퍼런스 사망 조건:
-// 충돌 시 bodyA 또는 bodyB의 중심Y가 70 미만이면 game_over
-// (방금 생성된 공은 제외 — spawnTime 1초 이내)
-function checkDangerCollision(a, b) {
-  if (gameOver) return;
-  if (a.label !== 'ball' || b.label !== 'ball') return;
-  if (!a.gameData || !b.gameData) return;
-
-  const now = Date.now();
-  // 방금 생성된 공(1초 이내)은 판정 제외
-  if (now - a.gameData.spawnTime < 1000) return;
-  if (now - b.gameData.spawnTime < 1000) return;
-
-  const GAME_OVER_Y = DANGER_Y;
-  const topA = a.position.y - BALL_RADII[a.gameData.level - 1];
-  const topB = b.position.y - BALL_RADII[b.gameData.level - 1];
-
-  if (topA < GAME_OVER_Y || topB < GAME_OVER_Y) {
-    endGame();
-  }
+  event.pairs.forEach(pair => processMergePair(pair.bodyA, pair.bodyB));
 }
 
 function processMergePair(a, b) {
@@ -432,9 +390,8 @@ function checkProximityMerges() {
 function mergeBalls(a, b, level) {
   if (!activeBodies.includes(a) || !activeBodies.includes(b)) return;
 
-  // 레퍼런스: bodyA 위치 기준으로 새 공 생성 (중점 아님)
-  const mx = a.position.x;
-  const my = a.position.y;
+  const mx = (a.position.x + b.position.x) / 2;
+  const my = (a.position.y + b.position.y) / 2;
 
   activeBodies = activeBodies.filter(bd => bd !== a && bd !== b);
   dangerTimers.delete(a.gameData.uid);
@@ -445,9 +402,6 @@ function mergeBalls(a, b, level) {
   const newLevel    = level + 1;
   const isWatermelon = newLevel === 11;
 
-  // 레퍼런스: updateScore(합체 전 공의 key) 기준
-  // fruit0+fruit0 → level=1 → MERGE_SCORES[0] = +1
-  // fruit9+fruit9 → level=10 → MERGE_SCORES[9] = +55
   score += MERGE_SCORES[level - 1];
   if (score > bestScore) bestScore = score;
 
@@ -502,31 +456,26 @@ function toGameX(clientX) {
 }
 
 function renderFrame() {
-  // [1] 박스 이미지를 배경으로 먼저 그리기
-  if (boxImg && boxImg.complete && boxImg.naturalWidth > 0) {
-    ctx.drawImage(boxImg, 0, 0, BOARD_WIDTH, BOARD_HEIGHT);
-  } else {
-    // 박스 이미지 없으면 크림색 배경
-    ctx.fillStyle = '#fff9ee';
-    ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
-  }
+  // [1] 배경: 밝은 하늘색
+  ctx.fillStyle = '#d6eeff';
+  ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
 
-  // [2] DANGER 경고선 (박스 상단 안쪽 선 위치)
+  // 게임오버 라인
   ctx.save();
   ctx.strokeStyle = 'rgba(229, 57, 53, 0.6)';
   ctx.lineWidth   = 2;
   ctx.setLineDash([10, 7]);
   ctx.beginPath();
-  ctx.moveTo(BOX_LEFT, DANGER_Y);
-  ctx.lineTo(BOX_RIGHT, DANGER_Y);
+  ctx.moveTo(0, DANGER_Y);
+  ctx.lineTo(BOARD_WIDTH, DANGER_Y);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.font      = 'bold 11px sans-serif';
+  ctx.font      = '11px sans-serif';
   ctx.fillStyle = 'rgba(229,57,53,0.6)';
-  ctx.fillText('DANGER', BOX_LEFT + 6, DANGER_Y - 4);
+  ctx.fillText('DANGER', 6, DANGER_Y - 5);
   ctx.restore();
 
-  // [3] 합체 파동 효과
+  // 합체 파동 효과
   const now = Date.now();
   mergeEffects = mergeEffects.filter(eff => {
     const t = (now - eff.startTime) / eff.duration;
@@ -556,23 +505,27 @@ function renderFrame() {
     return true;
   });
 
-  // [4] 공 렌더링
+  // 공 렌더링
   Composite.allBodies(world).forEach(body => {
     if (body.label !== 'ball' || !body.gameData) return;
+
     const { level, popScale } = body.gameData;
     const radius = BALL_RADII[level - 1];
     const img    = imgs[level - 1];
     const { x, y } = body.position;
+
     if (popScale < 1) body.gameData.popScale = Math.min(1, popScale + 0.15);
     const scale = body.gameData.popScale;
+
     ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(body.angle);
-    ctx.scale(scale, scale);
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
+ctx.translate(x, y);
+ctx.rotate(body.angle);
+ctx.scale(scale, scale);
+ctx.beginPath();
+ctx.arc(0, 0, radius, 0, Math.PI * 2);
+ctx.closePath();
+ctx.clip();
+
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
     } else {
@@ -587,68 +540,45 @@ function renderFrame() {
     ctx.restore();
   });
 
-  // [5] 박스 이미지를 다시 위에 덮기 — 테두리가 공 위에 보이게
-  if (boxImg && boxImg.complete && boxImg.naturalWidth > 0) {
-    // 테두리 부분만 덮기 위해 안쪽 클리핑 제외
-    ctx.save();
-    // 안쪽 플레이 영역을 구멍 뚫어서 테두리만 그리기
-    ctx.beginPath();
-    // 전체 캔버스
-    ctx.rect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
-    // 안쪽 플레이 영역 (역방향 = 구멍)
-    ctx.rect(BOX_LEFT, DANGER_Y, BOX_RIGHT - BOX_LEFT, BOX_BOTTOM - DANGER_Y);
-    ctx.clip('evenodd');
-    ctx.drawImage(boxImg, 0, 0, BOARD_WIDTH, BOARD_HEIGHT);
-    ctx.restore();
+  // [3] 세로 가이드 라인 제거 → 미리보기 공만 표시 (세로선 없음)
+  // [3] 떨어지기 전 대기 공 표시
+if (canDrop && !gameOver) {
+  const lv     = currentLv;
+  const radius = BALL_RADII[lv - 1];
+  const img    = imgs[lv - 1];
+  const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
+
+  ctx.save();
+
+  // ★ 절대 흐리지 않게: 완전 불투명
+  ctx.globalAlpha = 1;
+  ctx.translate(safeX, DROP_Y);
+  ctx.rotate(0);
+  ctx.scale(1, 1);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+  } else {
+    ctx.fillStyle = FALLBACK_COLORS[lv - 1];
+    ctx.fill();
   }
 
-  // [6] 대기 공 표시 (박스 위에서 대기)
-  if (canDrop && !gameOver) {
-    const lv     = currentLv;
-    const radius = BALL_RADII[lv - 1];
-    const img    = imgs[lv - 1];
-    const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
-    ctx.save();
-    ctx.globalAlpha = 1;
-    ctx.translate(safeX, DROP_Y);
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    if (img && img.complete && img.naturalWidth > 0) {
-      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
-    } else {
-      ctx.fillStyle = FALLBACK_COLORS[lv - 1];
-      ctx.fill();
-    }
-    ctx.restore();
-  }
+  ctx.restore();
+}
 
   if (gameOver) {
-    ctx.fillStyle = 'rgba(255,249,238,0.5)';
+    ctx.fillStyle = 'rgba(200,230,255,0.4)';
     ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
   }
 }
 
-// ── 모서리 둥근 사각형 헬퍼 ──
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
 // ====================================================
 // 게임오버 감지
-// 레퍼런스 방식: 충돌 시 즉시 판정 (checkDangerCollision)
-// 아래는 안전망 — 공이 정지한 채로 위험선을 넘어있을 때 대비
 // ====================================================
 function checkGameOver() {
   if (gameOver) return;
@@ -656,18 +586,25 @@ function checkGameOver() {
 
   for (const body of activeBodies) {
     if (!body.gameData || body.gameData.isMerging) continue;
-    const age = now - body.gameData.spawnTime;
-    if (age < 2000) continue; // 생성 후 2초 이내 제외
+    const level  = body.gameData.level;
+    const radius = BALL_RADII[level - 1];
+    const age    = now - body.gameData.spawnTime;
+    if (age < 1500) continue;
 
-    const radius = BALL_RADII[body.gameData.level - 1];
     const topY = body.position.y - radius;
-    const vx = Math.abs(body.velocity.x);
-    const vy = Math.abs(body.velocity.y);
+    const vx   = Math.abs(body.velocity.x);
+    const vy   = Math.abs(body.velocity.y);
 
-    // 완전히 정지한 상태로 위험선 위에 있으면 게임오버 (안전망)
-    if (topY < DANGER_Y && vx < 0.5 && vy < 0.5) {
-      endGame();
-      return;
+    if (topY < DANGER_Y && vx < 1.0 && vy < 1.0) {
+      const uid = body.gameData.uid;
+      if (!dangerTimers.has(uid)) {
+        dangerTimers.set(uid, now);
+      } else if (now - dangerTimers.get(uid) > 2000) {
+        endGame();
+        return;
+      }
+    } else {
+      dangerTimers.delete(body.gameData.uid);
     }
   }
 }
@@ -684,19 +621,23 @@ async function endGame() {
     wrap.classList.remove('shake-hard');
     void wrap.offsetWidth;
     wrap.classList.add('shake-hard');
-    setTimeout(() => wrap.classList.remove('shake-hard'), 1500);
+
+    setTimeout(() => {
+      wrap.classList.remove('shake-hard');
+    }, 1500);
   }
 
-  const prevBest   = lsGetInt(LS.BEST_SCORE, 0);
+const prevBest = lsGetInt(LS.BEST_SCORE, 0);
   const prevBestWm = lsGetInt(LS.BEST_WATERMELON, 0);
   let scoreUpdated = false;
-  let wmUpdated    = false;
+  let wmUpdated = false;
 
-  if (score > prevBest) {
+ if (score > prevBest) {
     lsSet(LS.BEST_SCORE, score);
-    bestScore    = score;
+    bestScore = score;
     scoreUpdated = true;
   }
+
   if (watermelonCount > prevBestWm) {
     lsSet(LS.BEST_WATERMELON, watermelonCount);
     bestWatermelonCount = watermelonCount;
@@ -705,10 +646,9 @@ async function endGame() {
 
   updateScoreUI();
 
-  // 레퍼런스: 카메라 흔들림(800ms) 완료 후 게임오버 화면
   setTimeout(() => {
     showGameoverModal(scoreUpdated, wmUpdated);
-  }, 900);
+  }, 1400);
 
   if (firebaseEnabled && nickname && (scoreUpdated || wmUpdated)) {
     await saveToFirebase();
@@ -725,7 +665,7 @@ function restartGame() {
   clearAllBalls();
   hideGameoverModal();
 
-  // 레퍼런스 동일: 재시작 후 첫 공도 1단계 고정
+  // [5] 재시작 후 첫 공은 항상 1단계
   currentLv = 1;
   nextLv    = randomDropLevel();
   dropX     = BOARD_WIDTH / 2;
@@ -1023,7 +963,7 @@ async function init() {
   if (!nickname) { showNicknameModal(); }
   else { updatePlayerDisplay(); }
 
-  // 레퍼런스 동일: 첫 공은 항상 1단계(fruit0) 고정, 다음 공만 랜덤
+  // [5] 첫 공은 무조건 1단계
   currentLv = 1;
   nextLv    = randomDropLevel();
 
