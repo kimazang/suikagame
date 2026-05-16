@@ -884,7 +884,7 @@ function renderRanking(data) {
           <span class="rank-num">${i + 1}</span>
           <span class="rank-nick">${escHtml(item.nickname)}</span>
           <span class="rank-score">${(item.score||0).toLocaleString()}P</span>
-          <span class="rank-wm">🍉${item.watermelonCount||0}</span>
+          <span class="rank-wm">🤎${item.watermelonCount||0}</span>
         </div>`;
     } else {
       return `
