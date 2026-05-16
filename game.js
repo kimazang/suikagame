@@ -1,13 +1,16 @@
 /**
  * 큐플 합치기 — game.js
- * 수정 내역:
- * 1. UI: 큐플레이 스타일 밝은 테마
- * 2. 진화의 고리: 서클 배치
- * 3. 가이드 세로선 제거
- * 4. 합체 버그 수정 (collisionActive + 근접 감지)
- * 5. 첫 공 항상 1단계
- * 6. 랭킹: 빈 슬롯 10개 표시
- * 7. 효과음 추가 (Web Audio API)
+ * 레퍼런스(playsuikagame.com) 기준 수정 내역:
+ * 1. 점수 체계: 삼각수 공식 [1,3,6,10,15,21,28,36,45,55,66]
+ * 2. 사망 조건: 충돌 시 공 상단 68px 미만이면 즉시 게임오버
+ * 3. 드롭 확률: 1~5단계 균등 랜덤 (가중치 제거)
+ * 4. 쿨다운: 600ms
+ * 5. 물리: frictionAir/frictionStatic/density/slop 제거 (레퍼런스와 동일)
+ * 6. DROP_Y: 80px (레퍼런스 원본)
+ * 7. 첫 공: 랜덤 (1단계 고정 해제)
+ * 8. 합체 위치: bodyA 기준 (중점 → A위치)
+ * 9. 게임오버 모달: shake 완료(900ms) 후 표시
+ * 10. 합체 시 팝 애니메이션: popScale 0.3에서 시작
  */
 
 // ====================================================
@@ -38,7 +41,7 @@ const FIREBASE_CONFIG = {
 const BOARD_WIDTH  = 544;
 const BOARD_HEIGHT = 708;
 const DANGER_Y     = 68;   // 게임오버 판정 Y (레퍼런스 비율 기준: 70/724 * 708 ≈ 68px)
-const DROP_Y       = 50;   // 공 시작 Y
+const DROP_Y       = 80;   // 공 시작 Y (레퍼런스: 0x50 = 80px)
 const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms (레퍼런스 0x258 = 600)
 
 // 이미지 URL (여기서 수정)
@@ -272,23 +275,20 @@ function randomDropLevel() {
 function createBall(x, y, level, fromMerge = false) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-  restitution:    0,
-  friction:       1,
-  frictionAir: 0.0015,
-  frictionStatic: 0.5,
-  density:        0.001 + level * 0.0002,
-  label:          'ball',
-  slop:           0.05,
-});
+    restitution: 0,       // setBounce(0)
+    friction:    1,       // setFriction(1)
+    label:       'ball',
+    // frictionAir, frictionStatic, density, slop → 레퍼런스에 없으므로 제거 (Matter.js 기본값 사용)
+  });
 
   ballIdCnt++;
   body.gameData = {
-  level,
-  uid:       ballIdCnt,
-  isMerging: false,
-  spawnTime: Date.now(),
-  popScale:  1.0,
-};
+    level,
+    uid:       ballIdCnt,
+    isMerging: false,
+    spawnTime: Date.now(),
+    popScale:  fromMerge ? 0.3 : 1.0, // 합체 시 팝 애니메이션
+  };
 
   World.add(world, body);
   activeBodies.push(body);
@@ -419,8 +419,9 @@ function checkProximityMerges() {
 function mergeBalls(a, b, level) {
   if (!activeBodies.includes(a) || !activeBodies.includes(b)) return;
 
-  const mx = (a.position.x + b.position.x) / 2;
-  const my = (a.position.y + b.position.y) / 2;
+  // 레퍼런스: bodyA 위치 기준으로 새 공 생성 (중점 아님)
+  const mx = a.position.x;
+  const my = a.position.y;
 
   activeBodies = activeBodies.filter(bd => bd !== a && bd !== b);
   dangerTimers.delete(a.gameData.uid);
@@ -647,23 +648,19 @@ async function endGame() {
     wrap.classList.remove('shake-hard');
     void wrap.offsetWidth;
     wrap.classList.add('shake-hard');
-
-    setTimeout(() => {
-      wrap.classList.remove('shake-hard');
-    }, 1500);
+    setTimeout(() => wrap.classList.remove('shake-hard'), 1500);
   }
 
-const prevBest = lsGetInt(LS.BEST_SCORE, 0);
+  const prevBest   = lsGetInt(LS.BEST_SCORE, 0);
   const prevBestWm = lsGetInt(LS.BEST_WATERMELON, 0);
   let scoreUpdated = false;
-  let wmUpdated = false;
+  let wmUpdated    = false;
 
- if (score > prevBest) {
+  if (score > prevBest) {
     lsSet(LS.BEST_SCORE, score);
-    bestScore = score;
+    bestScore    = score;
     scoreUpdated = true;
   }
-
   if (watermelonCount > prevBestWm) {
     lsSet(LS.BEST_WATERMELON, watermelonCount);
     bestWatermelonCount = watermelonCount;
@@ -672,9 +669,10 @@ const prevBest = lsGetInt(LS.BEST_SCORE, 0);
 
   updateScoreUI();
 
+  // 레퍼런스: 카메라 흔들림(800ms) 완료 후 게임오버 화면
   setTimeout(() => {
     showGameoverModal(scoreUpdated, wmUpdated);
-  }, 1400);
+  }, 900);
 
   if (firebaseEnabled && nickname && (scoreUpdated || wmUpdated)) {
     await saveToFirebase();
@@ -691,8 +689,8 @@ function restartGame() {
   clearAllBalls();
   hideGameoverModal();
 
-  // [5] 재시작 후 첫 공은 항상 1단계
-  currentLv = 1;
+  // 레퍼런스: 재시작 후 첫 공도 랜덤
+  currentLv = randomDropLevel();
   nextLv    = randomDropLevel();
   dropX     = BOARD_WIDTH / 2;
 
@@ -989,8 +987,8 @@ async function init() {
   if (!nickname) { showNicknameModal(); }
   else { updatePlayerDisplay(); }
 
-  // [5] 첫 공은 무조건 1단계
-  currentLv = 1;
+  // 레퍼런스: 첫 공도 랜덤 (1~5단계)
+  currentLv = randomDropLevel();
   nextLv    = randomDropLevel();
 
   updateScoreUI();
