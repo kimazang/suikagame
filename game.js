@@ -489,8 +489,8 @@ function toGameX(clientX) {
 }
 
 function renderFrame() {
-  // 배경
-  ctx.fillStyle = '#e8f5ff';
+  // 배경 (박스 안쪽 색과 동일)
+  ctx.fillStyle = '#cceeff';
   ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
 
   // DANGER 경고선
