@@ -39,7 +39,7 @@ const BOARD_WIDTH  = 544;
 const BOARD_HEIGHT = 708;
 const DANGER_Y     = 120;  // 게임오버 판정 Y
 const DROP_Y       = 80;   // 공 시작 Y
-const DROP_COOLDOWN = 550; // 드롭 후 쿨다운 ms
+const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms (레퍼런스 0x258 = 600)
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
@@ -59,17 +59,13 @@ const BALL_IMAGES = [
 // 단계별 반지름 (여기서 수정)
 const BALL_RADII = [19, 25, 33, 43, 55, 69, 85, 103, 123, 145, 168];
 
-// 합체 점수 (새로 생성된 단계 기준, 여기서 수정)
-const MERGE_SCORES = [0, 2, 6, 15, 36, 78, 160, 325, 660, 1350, 2800];
+// 합체 점수 (레퍼런스 원본: 삼각수 n*(n+1)/2)
+// fruit0→+1, fruit1→+3, fruit2→+6, fruit3→+10, fruit4→+15,
+// fruit5→+21, fruit6→+28, fruit7→+36, fruit8→+45, fruit9→+55, fruit10→+66
+const MERGE_SCORES = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66];
 
-// 드롭 확률 [단계, 누적확률]
-const DROP_WEIGHTS = [
-  [1, 0.20],
-  [2, 0.40],
-  [3, 0.60],
-  [4, 0.80],
-  [5, 1.00],
-];
+// 드롭 확률: 레퍼런스 원본과 동일하게 1~5단계 균등 확률
+// (레퍼런스: Math.floor(Math.random() * 5) → fruit0~fruit4)
 
 // localStorage 키
 const LS = {
@@ -264,14 +260,10 @@ function clearAllBalls() {
 }
 
 // ====================================================
-// 랜덤 단계 생성
+// 랜덤 단계 생성 (레퍼런스: 1~5단계 균등 확률)
 // ====================================================
 function randomDropLevel() {
-  const r = Math.random();
-  for (const [lv, cp] of DROP_WEIGHTS) {
-    if (r < cp) return lv;
-  }
-  return 1;
+  return Math.floor(Math.random() * 5) + 1;
 }
 
 // ====================================================
@@ -330,7 +322,35 @@ function dropBall() {
 // ====================================================
 function onCollision(event) {
   if (gameOver) return;
-  event.pairs.forEach(pair => processMergePair(pair.bodyA, pair.bodyB));
+  event.pairs.forEach(pair => {
+    // 사망 판정: 레퍼런스 원본과 동일
+    // 충돌하는 두 공 중 하나라도 상단이 DANGER_Y(70px) 위에 있으면 즉시 게임오버
+    checkDangerCollision(pair.bodyA, pair.bodyB);
+    // 합체 판정
+    processMergePair(pair.bodyA, pair.bodyB);
+  });
+}
+
+// 레퍼런스 사망 조건:
+// 충돌 시 bodyA 또는 bodyB의 중심Y가 70 미만이면 game_over
+// (방금 생성된 공은 제외 — spawnTime 1초 이내)
+function checkDangerCollision(a, b) {
+  if (gameOver) return;
+  if (a.label !== 'ball' || b.label !== 'ball') return;
+  if (!a.gameData || !b.gameData) return;
+
+  const now = Date.now();
+  // 방금 생성된 공(1초 이내)은 판정 제외
+  if (now - a.gameData.spawnTime < 1000) return;
+  if (now - b.gameData.spawnTime < 1000) return;
+
+  const GAME_OVER_Y = 70; // 레퍼런스 원본: 0x46 = 70px
+  const topA = a.position.y - BALL_RADII[a.gameData.level - 1];
+  const topB = b.position.y - BALL_RADII[b.gameData.level - 1];
+
+  if (topA < GAME_OVER_Y || topB < GAME_OVER_Y) {
+    endGame();
+  }
 }
 
 function processMergePair(a, b) {
@@ -411,6 +431,8 @@ function mergeBalls(a, b, level) {
   const newLevel    = level + 1;
   const isWatermelon = newLevel === 11;
 
+  // 레퍼런스: 합체된 새 공 단계(newLevel) 기준 → MERGE_SCORES[newLevel-1]
+  // fruit0(1단계)로 합쳐지면 +1, fruit10(11단계)면 +66
   score += MERGE_SCORES[newLevel - 1];
   if (score > bestScore) bestScore = score;
 
@@ -588,6 +610,8 @@ if (canDrop && !gameOver) {
 
 // ====================================================
 // 게임오버 감지
+// 레퍼런스 방식: 충돌 시 즉시 판정 (checkDangerCollision)
+// 아래는 안전망 — 공이 정지한 채로 위험선을 넘어있을 때 대비
 // ====================================================
 function checkGameOver() {
   if (gameOver) return;
@@ -595,25 +619,18 @@ function checkGameOver() {
 
   for (const body of activeBodies) {
     if (!body.gameData || body.gameData.isMerging) continue;
-    const level  = body.gameData.level;
-    const radius = BALL_RADII[level - 1];
-    const age    = now - body.gameData.spawnTime;
-    if (age < 1500) continue;
+    const age = now - body.gameData.spawnTime;
+    if (age < 2000) continue; // 생성 후 2초 이내 제외
 
+    const radius = BALL_RADII[body.gameData.level - 1];
     const topY = body.position.y - radius;
-    const vx   = Math.abs(body.velocity.x);
-    const vy   = Math.abs(body.velocity.y);
+    const vx = Math.abs(body.velocity.x);
+    const vy = Math.abs(body.velocity.y);
 
-    if (topY < DANGER_Y && vx < 1.0 && vy < 1.0) {
-      const uid = body.gameData.uid;
-      if (!dangerTimers.has(uid)) {
-        dangerTimers.set(uid, now);
-      } else if (now - dangerTimers.get(uid) > 2000) {
-        endGame();
-        return;
-      }
-    } else {
-      dangerTimers.delete(body.gameData.uid);
+    // 완전히 정지한 상태로 위험선 위에 있으면 게임오버 (안전망)
+    if (topY < DANGER_Y && vx < 0.5 && vy < 0.5) {
+      endGame();
+      return;
     }
   }
 }
