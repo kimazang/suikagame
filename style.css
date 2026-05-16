@@ -270,20 +270,17 @@ body {
   position: relative;
   width: 100%;
   max-width: 544px;
-  border-radius: 4px;
-  overflow: visible;
-  box-shadow: 0 8px 24px rgba(0,60,100,0.25);
-  background: #e8f5ff;
+  overflow: hidden;
+  background: #fdf6e3;
   line-height: 0;
 }
 #game-canvas {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 4px;
 }
 
-/* 박스 오버레이 이미지 — 캔버스 위에 씌우기 */
+/* 박스 오버레이 — 캔버스 위에 씌우기 */
 .canvas-wrap::after {
   content: '';
   position: absolute;
@@ -292,7 +289,8 @@ body {
   height: 100%;
   background-image: url('https://raw.githubusercontent.com/kimazang/suikagame/main/box.png');
   background-size: 100% 100%;
-  pointer-events: none; /* 클릭 통과 */
+  background-repeat: no-repeat;
+  pointer-events: none;
   z-index: 2;
 }
 
