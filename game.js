@@ -39,13 +39,13 @@ const FIREBASE_CONFIG = {
 // [B] 게임 상수 (여기서 수정)
 // ====================================================
 const BOARD_WIDTH  = 544;
-const BOARD_HEIGHT = 708;
+const BOARD_HEIGHT = 634; // 박스 바닥에 맞춤 (원본 584/652 * 708)
 // 박스 이미지 안쪽 경계 (579x652 → 544x708 비율 환산)
-const BOX_LEFT   = 48;   // 왼쪽 벽
-const BOX_RIGHT  = 495;  // 오른쪽 벽
-const BOX_BOTTOM = 634;  // 바닥
+const BOX_LEFT   = 48;   // 렌더링용 (evenodd 클리핑)
+const BOX_RIGHT  = 495;  // 렌더링용
+const BOX_BOTTOM = 634;  // 렌더링용
 const DANGER_Y   = 59;   // 게임오버 판정 Y (박스 상단 안쪽 선)
-const DROP_Y     = 35;   // 공 시작 Y (박스 위에서 대기)
+const DROP_Y     = 35;   // 공 시작 Y
 const DROP_COOLDOWN = 600;
 
 // 이미지 URL (여기서 수정)
@@ -255,14 +255,13 @@ function initPhysics() {
   engine.gravity.y = 1.5;
 
   const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
-  const wallW = 50;
   World.add(world, [
-    // 바닥 — 박스 바닥에 맞춤
-    Bodies.rectangle((BOX_LEFT + BOX_RIGHT) / 2, BOX_BOTTOM + wallW / 2, BOX_RIGHT - BOX_LEFT, wallW, opt),
+    // 바닥
+    Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
     // 왼쪽 벽
-    Bodies.rectangle(BOX_LEFT - wallW / 2, BOARD_HEIGHT / 2, wallW, BOARD_HEIGHT * 2, opt),
+    Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
     // 오른쪽 벽
-    Bodies.rectangle(BOX_RIGHT + wallW / 2, BOARD_HEIGHT / 2, wallW, BOARD_HEIGHT * 2, opt),
+    Bodies.rectangle(BOARD_WIDTH + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
   ]);
 
   // [4] 합체 버그 수정: collisionStart + collisionActive 둘 다 사용
@@ -319,7 +318,7 @@ function dropBall() {
 
   const lv     = currentLv;
   const radius = BALL_RADII[lv - 1];
-  const safeX  = Math.max(BOX_LEFT + radius + 1, Math.min(BOX_RIGHT - radius - 1, dropX));
+  const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
 
   createBall(safeX, DROP_Y, lv, false);
   playDropSound(); // [7] 드롭 효과음
@@ -359,7 +358,7 @@ function checkDangerCollision(a, b) {
   if (now - a.gameData.spawnTime < 1000) return;
   if (now - b.gameData.spawnTime < 1000) return;
 
-  const GAME_OVER_Y = 68; // 레퍼런스 비율 환산값 (원본 70/724 * 708 ≈ 68px)
+  const GAME_OVER_Y = DANGER_Y; // 박스 상단 안쪽 선과 동일
   const topA = a.position.y - BALL_RADII[a.gameData.level - 1];
   const topB = b.position.y - BALL_RADII[b.gameData.level - 1];
 
@@ -609,7 +608,7 @@ function renderFrame() {
     const lv     = currentLv;
     const radius = BALL_RADII[lv - 1];
     const img    = imgs[lv - 1];
-    const safeX  = Math.max(BOX_LEFT + radius + 1, Math.min(BOX_RIGHT - radius - 1, dropX));
+    const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
     ctx.save();
     ctx.globalAlpha = 1;
     ctx.translate(safeX, DROP_Y);
