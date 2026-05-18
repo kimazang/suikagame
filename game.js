@@ -393,7 +393,21 @@ function processMergePair(a, b) {
 
   const lvA = a.gameData.level;
   const lvB = b.gameData.level;
-  if (lvA !== lvB || lvA >= 11) return;
+  if (lvA !== lvB) return;
+
+  // 11단계끼리는 터지면서 사라짐
+  if (lvA === 11) {
+    const uidA = a.gameData.uid;
+    const uidB = b.gameData.uid;
+    const key  = uidA < uidB ? `${uidA}_${uidB}` : `${uidB}_${uidA}`;
+    if (mergeQueue.has(key)) return;
+    mergeQueue.add(key);
+    a.gameData.isMerging = true;
+    b.gameData.isMerging = true;
+    explodeBalls(a, b);
+    mergeQueue.delete(key);
+    return;
+  }
 
   const uidA = a.gameData.uid;
   const uidB = b.gameData.uid;
@@ -431,7 +445,7 @@ function checkProximityMerges() {
 
       const lvA = a.gameData.level;
       const lvB = b.gameData.level;
-      if (lvA !== lvB || lvA >= 11) continue;
+      if (lvA !== lvB) continue;
 
       // 거리 계산
       const dx   = a.position.x - b.position.x;
@@ -445,6 +459,35 @@ function checkProximityMerges() {
       }
     }
   }
+}
+
+// ====================================================
+// 11단계 폭발 (터지면서 사라짐)
+// ====================================================
+function explodeBalls(a, b) {
+  if (!activeBodiesSet.has(a) || !activeBodiesSet.has(b)) return;
+
+  const mx = (a.position.x + b.position.x) / 2;
+  const my = (a.position.y + b.position.y) / 2;
+
+  activeBodies = activeBodies.filter(bd => bd !== a && bd !== b);
+  activeBodiesSet.delete(a);
+  activeBodiesSet.delete(b);
+  dangerTimers.delete(a.gameData.uid);
+  dangerTimers.delete(b.gameData.uid);
+  World.remove(world, a);
+  World.remove(world, b);
+
+  // 점수 추가 (11단계 합체 점수)
+  score += MERGE_SCORES[10];
+  if (score > bestScore) bestScore = score;
+
+  watermelonCount++;
+  if (watermelonCount > bestWatermelonCount) bestWatermelonCount = watermelonCount;
+
+  playMergeSound(11);
+  addMergeEffect(mx, my, 11, true);
+  updateScoreUI();
 }
 
 // ====================================================
