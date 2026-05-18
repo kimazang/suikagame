@@ -698,31 +698,33 @@ function renderFrame() {
     const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
     const cloudX = Math.max(46, Math.min(BOARD_WIDTH - 46, safeX));
 
-    // cloud.png를 현재 공 뒤/위에 먼저 그린다.
+    // 구름은 항상 표시
     drawCloudHolder(cloudX, radius);
 
-    ctx.save();
-    ctx.globalAlpha = canDrop ? 1 : 0.92;
-    ctx.translate(safeX, DROP_Y);
+    // 대기공은 canDrop일 때만 표시 (쿨다운 중엔 숨김)
+    if (canDrop) {
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.translate(safeX, DROP_Y);
 
-    const canDrawImage =
-      img &&
-      (
-        img instanceof HTMLCanvasElement ||
-        (img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0)
-      );
+      const canDrawImage =
+        img &&
+        (
+          img instanceof HTMLCanvasElement ||
+          (img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0)
+        );
 
-    if (canDrawImage) {
-      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
-    } else {
-      ctx.fillStyle = FALLBACK_COLORS[lv - 1];
-      ctx.beginPath();
-      ctx.arc(0, 0, radius, 0, Math.PI * 2);
-      ctx.fill();
+      if (canDrawImage) {
+        ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+      } else {
+        ctx.fillStyle = FALLBACK_COLORS[lv - 1];
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
     }
-
-    ctx.restore();
-  }
 
   if (gameOver) {
     ctx.fillStyle = 'rgba(200,230,255,0.4)';
