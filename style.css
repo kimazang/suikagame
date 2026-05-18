@@ -279,7 +279,7 @@ body {
   font-weight: 400;
   color: var(--white);
   letter-spacing: 2px;
-  padding: 48px 0 8px;
+  padding: 44px 0 6px;
   text-shadow: 0 3px 12px rgba(0,80,160,0.3), 0 1px 0 rgba(255,255,255,0.3);
 }
 
@@ -290,14 +290,6 @@ body {
   width: 100%;
   max-width: 544px;
   justify-content: center;
-}
-
-/* PC 상단 퀵 버튼 (닉네임, 효과음) */
-.pc-quick-btns {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  padding: 0 0 4px;
 }
 
 /* 크레딧 */
@@ -531,9 +523,8 @@ body {
   }
   .left-panel   { display: none; }
   .right-panel  { display: none; }
-  .pc-title     { display: none !important; }
-  .pc-controls  { display: none !important; }
-  .pc-quick-btns { display: none !important; }
+  .pc-title    { display: none !important; }
+  .pc-controls { display: none !important; }
   .credit       { display: none !important; }
 
   .mobile-info-bar  { display: flex; margin: 0 14px; }
