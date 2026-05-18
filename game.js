@@ -150,7 +150,7 @@ function getAudio() {
   } catch (e) { return null; }
 }
 
-// 드롭 효과음: 가볍고 부드러운 "뚝"
+// 드롭 효과음: 가볍게 뚝 떨어지는 느낌
 function playDropSound() {
   const ctx = getAudio();
   if (!ctx) return;
@@ -160,53 +160,62 @@ function playDropSound() {
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(380, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.22, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
     osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.15);
+    osc.stop(ctx.currentTime + 0.09);
   } catch (e) {}
 }
 
-// 합체 효과음: 경쾌한 3음 상승
+// 합체 효과음: 방울 터지는 뽁! 느낌 (레벨 높을수록 낮고 통통)
 function playMergeSound(level) {
   const ctx = getAudio();
   if (!ctx) return;
   try {
-    const base = 440 * Math.pow(1.06, level);
-    const freqs = [base, base * 1.25, base * 1.5];
-    freqs.forEach((freq, i) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      const t = ctx.currentTime + i * 0.07;
-      gain.gain.setValueAtTime(0.18, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-      osc.start(t);
-      osc.stop(t + 0.35);
-    });
-    // 수박 완성 시 특별 사운드
+    // 레벨 높을수록 더 낮고 묵직한 뽁
+    const freq = 900 - level * 55;
+
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    // 노이즈 느낌 위한 필터
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = freq;
+    filter.Q.value = 0.8;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = 'sine';
+    // 뽁! 하고 빠르게 꺼지는 피치
+    osc.frequency.setValueAtTime(freq * 1.6, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, ctx.currentTime + 0.07);
+
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.13);
+
+    // 갈뚱(11단계) 완성 시 — 뽁뽁뽁 연속
     if (level === 11) {
-      setTimeout(() => {
-        const fanfare = [523, 659, 784, 1047];
-        fanfare.forEach((freq, i) => {
-          const osc  = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.frequency.value = freq;
-          osc.type = 'sine';
-          const t = ctx.currentTime + i * 0.1;
-          gain.gain.setValueAtTime(0.2, t);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-          osc.start(t);
-          osc.stop(t + 0.4);
-        });
-      }, 100);
+      [0, 0.10, 0.20, 0.30].forEach((delay, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g);
+        g.connect(ctx.destination);
+        const f = 500 - i * 40;
+        o.type = 'sine';
+        o.frequency.setValueAtTime(f * 1.5, ctx.currentTime + delay);
+        o.frequency.exponentialRampToValueAtTime(f * 0.5, ctx.currentTime + delay + 0.08);
+        g.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.12);
+        o.start(ctx.currentTime + delay);
+        o.stop(ctx.currentTime + delay + 0.13);
+      });
     }
   } catch (e) {}
 }
