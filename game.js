@@ -14,7 +14,7 @@
 // ====================================================
 import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc,
-         collection, query, orderBy, limit, where,
+         collection, query, orderBy, limit,
          getDocs, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
@@ -39,6 +39,11 @@ const BOARD_HEIGHT = 708;
 const DANGER_Y     = 68;   // 게임오버 판정 Y
 const DROP_Y       = 80;   // 공 시작 Y
 const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
+
+// 전체 물리 속도 보정
+// 1.00 = 기존 속도, 1.15 = 15% 빠르게, 1.25 = 25% 빠르게
+const PHYSICS_SPEED = 1.18;
+const MAX_PHYSICS_DELTA = 50; // 모바일 렉/프레임 저하 시 튐 방지용 상한 ms
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
@@ -827,6 +832,7 @@ async function endGame() {
 // ====================================================
 function restartGame() {
   gameOver = false; canDrop = true;
+  lastFrameTime = performance.now();
   score = 0; watermelonCount = 0;
   ballIdCnt = 0;
   proximityCheckFrame = 0;
@@ -843,18 +849,26 @@ function restartGame() {
   buildEvoRing(currentLv);
 
   // 게임루프 재시작
+  lastFrameTime = performance.now();
   requestAnimationFrame(gameLoop);
 }
 
 // ====================================================
 // 메인 게임 루프
 // ====================================================
-function gameLoop() {
+let lastFrameTime = performance.now();
+
+function gameLoop(now = performance.now()) {
+  const rawDelta = now - lastFrameTime;
+  const delta = Math.min(rawDelta, MAX_PHYSICS_DELTA);
+  lastFrameTime = now;
+
   if (!gameOver) {
-    Engine.update(engine, 1000 / 60);
+    Engine.update(engine, delta * PHYSICS_SPEED);
     checkGameOver();
     checkProximityMerges();
   }
+
   renderFrame();
 
   if (!gameOver) {
@@ -1116,71 +1130,17 @@ function showNicknameModal() {
 }
 function hideNicknameModal() { document.getElementById('nickname-modal').classList.add('hidden'); }
 
-async function isNicknameAlreadyUsed(input) {
-  // 최소 중복 방지:
-  // 이미 scores 컬렉션에 저장된 닉네임이면 다른 사람이 다시 사용할 수 없게 막는다.
-  // 단, 아직 점수를 저장한 적 없는 닉네임까지 선점하진 않는다.
-  if (!firebaseEnabled || !db) return false;
-
-  const q = query(collection(db, 'scores'), where('nickname', '==', input), limit(10));
-  const snap = await getDocs(q);
-
-  let usedByOther = false;
-  snap.forEach(d => {
-    const data = d.data();
-    if (data.playerId && data.playerId !== playerId) {
-      usedByOther = true;
-    }
-  });
-
-  return usedByOther;
-}
-
-async function confirmNickname() {
-  const inputEl = document.getElementById('nickname-input');
-  const input = inputEl.value.trim();
+function confirmNickname() {
+  const input = document.getElementById('nickname-input').value.trim();
   const errEl = document.getElementById('nickname-error');
-  const btn = document.getElementById('nickname-confirm-btn');
-
   if (input.length < 2 || input.length > 10) {
     errEl.textContent = '닉네임은 2~10글자여야 해요.';
     return;
   }
-
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = '확인 중...';
-  }
-  errEl.textContent = '닉네임 확인 중...';
-
-  try {
-    const duplicated = await isNicknameAlreadyUsed(input);
-
-    if (duplicated) {
-      errEl.textContent = '이미 기록이 있는 닉네임이에요. 다른 닉네임을 입력해주세요.';
-      return;
-    }
-
-    nickname = input;
-    lsSet(LS.NICKNAME, nickname);
-    updatePlayerDisplay();
-    hideNicknameModal();
-  } catch (e) {
-    console.warn('[큐플] 닉네임 중복 확인 실패:', e);
-
-    // 배포 안정성 우선:
-    // Firebase 확인이 잠깐 실패해도 게임 시작 자체가 막히지 않게 한다.
-    // 단, 랭킹/상품 확인 시 중복·식별 불가 닉네임은 제외 안내 필요.
-    nickname = input;
-    lsSet(LS.NICKNAME, nickname);
-    updatePlayerDisplay();
-    hideNicknameModal();
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = '시작하기 🚀';
-    }
-  }
+  nickname = input;
+  lsSet(LS.NICKNAME, nickname);
+  updatePlayerDisplay();
+  hideNicknameModal();
 }
 
 // ====================================================
