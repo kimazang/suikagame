@@ -335,12 +335,13 @@ function randomDropLevel() {
 function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-    restitution:   0,
-    friction:      1,
-    frictionStatic: 0.5, // 레퍼런스와 동일
-    frictionAir:   0.01, // 레퍼런스 Phaser 기본값
-    slop:          0.01,
-    label:         'ball',
+    restitution:    0,
+    friction:       1,
+    frictionStatic: 0.5,
+    frictionAir:    0.01,
+    angularDamping: 0.95, // 멈추면 회전 빠르게 안정화 (낙하속도 영향 없음)
+    slop:           0.01,
+    label:          'ball',
   });
 
   ballIdCnt++;
