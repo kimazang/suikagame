@@ -240,15 +240,6 @@ function createBallSprite(img, level) {
   octx.drawImage(img, pad, pad, s - pad * 2, s - pad * 2);
   octx.restore();
 
-  // 하단 제작법 아이콘처럼 정돈돼 보이도록 은은한 흰 테두리 추가
-  octx.save();
-  octx.beginPath();
-  octx.arc(s / 2, s / 2, s / 2 - 2 * scale, 0, Math.PI * 2);
-  octx.lineWidth = 2.5 * scale;
-  octx.strokeStyle = 'rgba(255,255,255,0.9)';
-  octx.stroke();
-  octx.restore();
-
   return off;
 }
 
