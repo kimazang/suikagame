@@ -56,8 +56,9 @@ const BALL_IMAGES = [
   'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika11.png',
 ];
 
-// 단계별 반지름 (여기서 수정)
-const BALL_RADII = [19, 25, 33, 43, 55, 69, 85, 103, 123, 145, 168];
+// 단계별 반지름 (레퍼런스 기준 지름/2)
+// 1:32 2:46 3:60 4:70 5:85 6:110 7:130 8:155 9:180(추정) 10:220 11:260
+const BALL_RADII = [16, 23, 30, 35, 42, 55, 65, 78, 90, 110, 130];
 
 // 합체 점수 (새로 생성된 단계 기준, 여기서 수정)
 const MERGE_SCORES = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66];
@@ -304,8 +305,7 @@ function dropBall() {
   currentLv = nextLv;
   nextLv    = randomDropLevel();
   updateNextPreview();
-  buildEvoRing(currentLv); // 진화의 고리 갱신
-
+  buildEvoRing(currentLv);
   setTimeout(() => { canDrop = true; }, DROP_COOLDOWN);
 }
 
@@ -464,7 +464,7 @@ function renderFrame() {
   ctx.lineTo(BOARD_WIDTH, DANGER_Y);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.font      = '11px sans-serif';
+  ctx.font      = "bold 11px 'Pretendard', 'Apple SD Gothic Neo', sans-serif";
   ctx.fillStyle = 'rgba(229,57,53,0.6)';
   ctx.fillText('DANGER', 6, DANGER_Y - 5);
   ctx.restore();
@@ -510,13 +510,12 @@ function renderFrame() {
 
 
     ctx.save();
-ctx.translate(x, y);
-ctx.rotate(body.angle);
-ctx.scale(1, 1);
-ctx.beginPath();
-ctx.arc(0, 0, radius, 0, Math.PI * 2);
-ctx.closePath();
-ctx.clip();
+    ctx.translate(x, y);
+    ctx.rotate(body.angle);
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
 
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
@@ -545,9 +544,6 @@ if (canDrop && !gameOver) {
   // ★ 절대 흐리지 않게: 완전 불투명
   ctx.globalAlpha = 1;
   ctx.translate(safeX, DROP_Y);
-  ctx.rotate(0);
-  ctx.scale(1, 1);
-
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
   ctx.closePath();
@@ -653,6 +649,7 @@ const prevBest = lsGetInt(LS.BEST_SCORE, 0);
 function restartGame() {
   gameOver = false; canDrop = true;
   score = 0; watermelonCount = 0;
+  ballIdCnt = 0;
   mergeEffects = [];
   clearAllBalls();
   hideGameoverModal();
@@ -687,25 +684,24 @@ async function saveToFirebase() {
   if (!firebaseEnabled || !db) return;
 
   try {
-    const docRef = doc(db, 'scores', playerId);
-    const existing = await getDoc(docRef);
+    const docRef  = doc(db, 'scores', playerId);
+    const snapshot = await getDoc(docRef);
 
-    let fs = score;
-    let fwm = watermelonCount;
+    // 기존 데이터와 비교해서 더 높은 값만 저장 (덮어씌움 방지)
+    const prev = snapshot.exists() ? snapshot.data() : {};
+    const newScore = Math.max(score, prev.score || 0);
+    const newWm    = Math.max(watermelonCount, prev.watermelonCount || 0);
 
-    if (existing.exists()) {
-      const d = existing.data();
-      fs  = Math.max(score, d.score || 0);
-      fwm = Math.max(watermelonCount, d.watermelonCount || 0);
-    }
+    // 실제로 갱신된 값이 없으면 저장 안 함
+    if (newScore === (prev.score || 0) && newWm === (prev.watermelonCount || 0)) return;
 
     await setDoc(docRef, {
       playerId,
       nickname,
-      score: fs,
-      watermelonCount: fwm,
-      updatedAt: serverTimestamp(),
-    });
+      score:          newScore,
+      watermelonCount: newWm,
+      updatedAt:      serverTimestamp(),
+    }, { merge: true }); // merge: true → 다른 필드 유지
 
     await loadRanking();
 
@@ -720,13 +716,37 @@ async function saveToFirebase() {
 async function loadRanking() {
   if (!firebaseEnabled || !db) { showEmptyRanking(); return; }
   try {
+    // TOP 10 쿼리
     const q    = query(collection(db, 'scores'), orderBy('score', 'desc'), limit(10));
     const snap = await getDocs(q);
     if (snap.empty) { showEmptyRanking(); return; }
-    const data = [];
-    snap.forEach(d => data.push(d.data()));
-    data.sort((a, b) => b.score - a.score || b.watermelonCount - a.watermelonCount);
-    renderRanking(data);
+    const top10 = [];
+    snap.forEach(d => top10.push(d.data()));
+    top10.sort((a, b) => b.score - a.score || b.watermelonCount - a.watermelonCount);
+
+    // 내가 TOP 10 안에 있는지 확인
+    const inTop10 = top10.some(d => d.playerId === playerId);
+
+    // TOP 10 밖이면 내 순위 별도 계산
+    let myRankData = null;
+    if (!inTop10 && playerId) {
+      // 내 점수보다 높은 사람 수 = 내 순위 - 1
+      const myDocRef = doc(db, 'scores', playerId);
+      const mySnap   = await getDoc(myDocRef);
+      if (mySnap.exists()) {
+        const myData  = mySnap.data();
+        const aboveQ  = query(collection(db, 'scores'), orderBy('score', 'desc'));
+        const allSnap = await getDocs(aboveQ);
+        let rank = 1;
+        allSnap.forEach(d => {
+          const dd = d.data();
+          if (dd.playerId !== playerId && dd.score > myData.score) rank++;
+        });
+        myRankData = { ...myData, rank };
+      }
+    }
+
+    renderRanking(top10, myRankData);
   } catch (e) {
     console.warn('[큐플] 랭킹 불러오기 실패:', e);
     showEmptyRanking();
@@ -747,8 +767,7 @@ function showEmptyRanking() {
   document.getElementById('mobile-ranking-list').innerHTML   = rows;
 }
 
-function renderRanking(data) {
-  // 10칸 유지: 데이터 있으면 채우고 나머지는 빈칸
+function renderRanking(data, myRankData = null) {
   const rows = Array.from({ length: 10 }, (_, i) => {
     const item = data[i];
     if (item) {
@@ -770,42 +789,61 @@ function renderRanking(data) {
     }
   }).join('');
 
-  document.getElementById('ranking-list').innerHTML        = rows;
-  document.getElementById('mobile-ranking-list').innerHTML = rows;
+  // TOP 10 밖 내 순위 표시
+  const myRow = myRankData ? `
+    <div class="rank-divider"></div>
+    <div class="rank-row my-rank my-rank-outside">
+      <span class="rank-num">${myRankData.rank}</span>
+      <span class="rank-nick">${escHtml(myRankData.nickname)}</span>
+      <span class="rank-score">${(myRankData.score||0).toLocaleString()}P</span>
+      <span class="rank-wm">🤎${myRankData.watermelonCount||0}</span>
+    </div>` : '';
+
+  const html = rows + myRow;
+  document.getElementById('ranking-list').innerHTML        = html;
+  document.getElementById('mobile-ranking-list').innerHTML = html;
 }
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ====================================================
-// [2] 진화의 고리 (서클 배치)
-// ====================================================
 function buildEvoRing(activeLevel = 0) {
   const ring = document.getElementById('evolution-ring');
-  if (!ring) return;
+  if (ring) {
+    ring.innerHTML = '';
+    const cx = 83, cy = 83, r = 65;
+    BALL_IMAGES.forEach((url, i) => {
+      const level = i + 1;
+      const angle = -90 + i * (360 / 11);
+      const rad   = angle * Math.PI / 180;
+      const div = document.createElement('div');
+      div.className = 'ring-item' + (level === activeLevel ? ' active' : '');
+      div.style.left = (cx + Math.cos(rad) * r) + 'px';
+      div.style.top  = (cy + Math.sin(rad) * r) + 'px';
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = level + '단계';
+      div.appendChild(img);
+      ring.appendChild(div);
+    });
+  }
 
-  ring.innerHTML = '';
-
-  const cx = 83, cy = 83, r = 65;
-
-  BALL_IMAGES.forEach((url, i) => {
-    const level = i + 1;
-    const angle = -90 + i * (360 / 11);
-    const rad   = angle * Math.PI / 180;
-
-    const div = document.createElement('div');
-    div.className = 'ring-item' + (level === activeLevel ? ' active' : '');
-    div.style.left = (cx + Math.cos(rad) * r) + 'px';
-    div.style.top  = (cy + Math.sin(rad) * r) + 'px';
-
-    const img = document.createElement('img');
-    img.src = url;
-    img.alt = level + '단계';
-
-    div.appendChild(img);
-    ring.appendChild(div);
-  });
+  // 모바일 가로형 진화의 고리
+  const mobileRow = document.getElementById('mobile-evolution-row');
+  if (mobileRow) {
+    mobileRow.innerHTML = '';
+    BALL_IMAGES.forEach((url, i) => {
+      const level = i + 1;
+      const div = document.createElement('div');
+      div.className = 'ring-item' + (level === activeLevel ? ' active' : '');
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = level + '단계';
+      div.appendChild(img);
+      mobileRow.appendChild(div);
+    });
+  }
 }
 
 // ====================================================
@@ -853,7 +891,7 @@ function showGameoverModal(scoreUpdated, wmUpdated) {
 
   let msg = '아쉽지만 최고 기록에는 도달하지 못했어요.';
   if (scoreUpdated)   msg = '🎉 최고 기록 갱신! 랭킹에 반영됐어요.';
-  else if (wmUpdated) msg = '🍉 수박 기록 갱신! 더 많은 수박을 만들었어요.';
+  else if (wmUpdated) msg = '🤎 갈뚱 기록 갱신! 더 많이 만들었어요.';
   setText('go-message', msg);
 
   document.getElementById('gameover-modal').classList.remove('hidden');
@@ -907,9 +945,8 @@ function initInput() {
   }, { passive: false });
 
   canvas.addEventListener('touchmove', e => {
-    e.preventDefault();
+    if (!gameOver) e.preventDefault();
     if (gameOver) return;
-    const rect = canvas.getBoundingClientRect();
     const rawX = toGameX(e.touches[0].clientX);
     dropX = Math.max(0, Math.min(BOARD_WIDTH, rawX));
   }, { passive: false });
