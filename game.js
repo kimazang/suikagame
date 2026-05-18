@@ -84,7 +84,7 @@ const FALLBACK_COLORS = [
 
 // 이미지 가장자리 투명 여백 때문에 구슬 사이가 떠 보이는 것을 보정한다.
 // 물리 충돌 크기는 그대로 두고, 화면에 그릴 때만 아주 살짝 크게 보여준다.
-const BALL_DRAW_SCALE = 1.045;
+const BALL_DRAW_SCALE = 1.0;
 
 // ====================================================
 // Firebase 초기화
@@ -297,6 +297,11 @@ function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
   engine.gravity.y = 2.5;
+  // 공끼리 겹쳐 보이는 현상을 줄이기 위해 물리 보정 반복 횟수를 올린다.
+  // 이미지 크기를 키우는 방식은 겹침을 더 심하게 만들 수 있어서 사용하지 않는다.
+  engine.positionIterations = 12;
+  engine.velocityIterations = 10;
+  engine.constraintIterations = 4;
 
   const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
   World.add(world, [
@@ -333,6 +338,7 @@ function createBall(x, y, level) {
   const body = Bodies.circle(x, y, radius, {
     restitution: 0,
     friction:    1,
+    slop:        0.01, // 기본값보다 작게 해서 정지 상태에서 공이 덜 파고들게 함
     label:       'ball',
   });
 
