@@ -37,7 +37,7 @@ const FIREBASE_CONFIG = {
 // ====================================================
 const BOARD_WIDTH  = 544;
 const BOARD_HEIGHT = 708;
-const DANGER_Y     = 68;  // 게임오버 판정 Y
+const DANGER_Y     = 68;   // 게임오버 판정 Y
 const DROP_Y       = 80;   // 공 시작 Y
 const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
@@ -62,7 +62,14 @@ const BALL_RADII = [19, 25, 33, 43, 55, 69, 85, 103, 123, 145, 168];
 // 합체 점수 (새로 생성된 단계 기준, 여기서 수정)
 const MERGE_SCORES = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66];
 
-// 드롭 확률: 1~5단계 균등
+// 드롭 확률 [단계, 누적확률]
+const DROP_WEIGHTS = [
+  [1, 0.20],
+  [2, 0.40],
+  [3, 0.60],
+  [4, 0.80],
+  [5, 1.00],
+];
 
 // localStorage 키
 const LS = {
@@ -262,8 +269,6 @@ function clearAllBalls() {
 function randomDropLevel() {
   return Math.floor(Math.random() * 5) + 1;
 }
-  return 1;
-}
 
 // ====================================================
 // 공 생성
@@ -271,14 +276,10 @@ function randomDropLevel() {
 function createBall(x, y, level, fromMerge = false) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-  restitution:    0,
-  friction:       1,
-
-
-
-  label:          'ball',
-
-});
+    restitution: 0,
+    friction:    1,
+    label:       'ball',
+  });
 
   ballIdCnt++;
   body.gameData = {
