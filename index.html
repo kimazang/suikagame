@@ -71,11 +71,6 @@
 
   <!-- PC 타이틀 -->
   <div class="pc-title">🤎 갈뚱 만들기</div>
-  <!-- PC 퀵 버튼 (닉네임/효과음) -->
-  <div class="pc-quick-btns">
-    <button id="change-nickname-btn" class="btn btn-ghost btn-sm">✏️ 닉네임 변경</button>
-    <button id="sound-toggle-btn" class="btn btn-ghost btn-sm">🔊 효과음 ON</button>
-  </div>
 
   <!-- 페이지 레이아웃 -->
   <div class="page-wrap">
@@ -87,23 +82,23 @@
       </div>
       <div class="score-card">
         <div class="score-item">
-          <div class="score-label">현재 큐포인트</div>
-          <div id="score-display" class="score-val">0</div>
-        </div>
-        <div class="score-divider"></div>
-        <div class="score-item">
           <div class="score-label">최고 큐포인트</div>
           <div id="best-display" class="score-val gold">0</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">이번 판 갈뚱 🤎</div>
-          <div id="wm-display" class="score-val">0개</div>
+          <div class="score-label">갈뚱 최고 기록 🤎</div>
+          <div id="best-wm-display" class="score-val gold">0개</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">갈뚱 최고 기록 🤎</div>
-          <div id="best-wm-display" class="score-val gold">0개</div>
+          <div class="score-label">현재 큐포인트</div>
+          <div id="score-display" class="score-val">0</div>
+        </div>
+        <div class="score-divider"></div>
+        <div class="score-item">
+          <div class="score-label">이번 판 갈뚱 🤎</div>
+          <div id="wm-display" class="score-val">0개</div>
         </div>
       </div>
       <div class="panel-logo rank-logo">🏆 TOP 10</div>
@@ -141,7 +136,9 @@
 
       <!-- PC 하단 버튼 -->
       <div class="pc-controls">
-        <button id="restart-btn" class="btn btn-orange">🔄 처음부터</button>
+        <button id="restart-btn" class="btn btn-orange btn-sm">🔄 처음부터</button>
+        <button id="sound-toggle-btn" class="btn btn-ghost btn-sm">🔊 효과음 ON</button>
+        <button id="change-nickname-btn" class="btn btn-ghost btn-sm">✏️ 닉네임 변경</button>
       </div>
 
       <!-- 모바일 하단 버튼 -->
