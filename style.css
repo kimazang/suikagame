@@ -712,3 +712,37 @@ body {
     height: 25px;
   }
 }
+
+
+/* 모바일 버튼 하단 잘림 보정 */
+@media (max-width: 780px) {
+  .mobile-controls {
+    overflow: visible;
+    padding-bottom: 9px;
+    margin-bottom: 2px;
+  }
+
+  .mobile-controls .btn {
+    min-height: 58px;
+    padding-top: 12px;
+    padding-bottom: 15px;
+  }
+
+  .mobile-controls .btn-orange {
+    box-shadow: 0 5px 0 var(--orange2);
+  }
+
+  .mobile-controls .btn-blue {
+    box-shadow: 0 5px 0 var(--blue2);
+  }
+
+  .mobile-controls .btn-orange:active {
+    transform: translateY(3px) scale(0.98);
+    box-shadow: 0 2px 0 var(--orange2);
+  }
+
+  .mobile-controls .btn-blue:active {
+    transform: translateY(3px) scale(0.98);
+    box-shadow: 0 2px 0 var(--blue2);
+  }
+}
