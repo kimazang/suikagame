@@ -150,39 +150,36 @@ function getAudio() {
 }
 
 // 비눗방울 터지는 소리 생성기
-// 화이트 노이즈를 밴드패스 필터로 걸러서 "퐁" 소리를 만든다
-function playBubblePop(actx, freq, volume, delay = 0) {
+// sine 오실레이터 + 짧은 피치 드롭 = 통통 튀는 귀여운 방울 소리
+function playBubblePop(actx, freq, vol, delay = 0) {
   try {
     const t = actx.currentTime + delay;
-    const dur = 0.07;
 
-    // 화이트 노이즈 버퍼
-    const bufSize = actx.sampleRate * dur;
-    const buffer  = actx.createBuffer(1, bufSize, actx.sampleRate);
-    const data    = buffer.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-
-    const noise = actx.createBufferSource();
-    noise.buffer = buffer;
-
-    // 밴드패스 필터: 특정 주파수만 통과시켜 "퐁" 느낌
-    const filter = actx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(freq, t);
-    filter.frequency.exponentialRampToValueAtTime(freq * 0.4, t + dur);
-    filter.Q.value = 12; // Q 높을수록 더 또렷한 퐁
-
-    // 짧고 빠르게 꺼지는 게인
+    // 메인: 높은 음에서 빠르게 내려오는 "퐁"
+    const osc  = actx.createOscillator();
     const gain = actx.createGain();
-    gain.gain.setValueAtTime(volume, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-
-    noise.connect(filter);
-    filter.connect(gain);
+    osc.connect(gain);
     gain.connect(actx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq * 1.8, t);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.55, t + 0.06);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    osc.start(t);
+    osc.stop(t + 0.1);
 
-    noise.start(t);
-    noise.stop(t + dur + 0.01);
+    // 보조: 살짝 높은 하모닉으로 통통한 느낌 추가
+    const osc2  = actx.createOscillator();
+    const gain2 = actx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(actx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(freq * 2.4, t);
+    osc2.frequency.exponentialRampToValueAtTime(freq * 0.9, t + 0.05);
+    gain2.gain.setValueAtTime(vol * 0.35, t);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    osc2.start(t);
+    osc2.stop(t + 0.08);
   } catch (e) {}
 }
 
@@ -190,23 +187,23 @@ function playBubblePop(actx, freq, volume, delay = 0) {
 function playDropSound() {
   const actx = getAudio();
   if (!actx) return;
-  playBubblePop(actx, 1800, 0.4);
+  playBubblePop(actx, 880, 0.18);
 }
 
-// 합체 효과음: 비눗방울 터지는 퐁! (레벨 높을수록 낮고 묵직하게)
+// 합체 효과음: 방울 터지는 퐁! (레벨 높을수록 낮고 통통)
 function playMergeSound(level) {
   const actx = getAudio();
   if (!actx) return;
   try {
-    // 1단계: 높고 가볍게(2200Hz) → 11단계: 낮고 통통하게(800Hz)
-    const freq   = 2200 - level * 130;
-    const volume = 0.55 + level * 0.02;
-    playBubblePop(actx, freq, volume);
+    // 1단계=1400Hz 높고 귀엽게 → 11단계=600Hz 낮고 통통하게
+    const freq = 1400 - level * 73;
+    const vol  = 0.22 + level * 0.01;
+    playBubblePop(actx, freq, vol);
 
-    // 갈뚱(11단계) — 퐁퐁퐁퐁 연속으로 터지는 느낌
+    // 갈뚱(11단계) — 퐁퐁퐁퐁 연속
     if (level === 11) {
-      [800, 1100, 900, 1300].forEach((f, i) => {
-        playBubblePop(actx, f, 0.5, (i + 1) * 0.09);
+      [700, 900, 800, 1100].forEach((f, i) => {
+        playBubblePop(actx, f, 0.2, (i + 1) * 0.1);
       });
     }
   } catch (e) {}
@@ -293,14 +290,12 @@ let engine, world;
 function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
-  engine.gravity.y = 2.5;
+  engine.gravity.y = 1.0; // 레퍼런스 Phaser gravity.y=1.5 체감 환산값
   // 공끼리 겹쳐 보이는 현상을 줄이기 위해 물리 보정 반복 횟수를 올린다.
   // 이미지 크기를 키우는 방식은 겹침을 더 심하게 만들 수 있어서 사용하지 않는다.
-  engine.positionIterations = 12;
-  engine.velocityIterations = 10;
-  engine.constraintIterations = 4;
+  // 레퍼런스 기본값 유지 (positionIterations:6, velocityIterations:4)
 
-  const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
+  const opt = { isStatic: true, friction: 1, restitution: 0, frictionStatic: 0.5, label: 'wall' };
   World.add(world, [
     Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
     Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
@@ -333,10 +328,12 @@ function randomDropLevel() {
 function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-    restitution: 0,
-    friction:    1,
-    slop:        0.01, // 기본값보다 작게 해서 정지 상태에서 공이 덜 파고들게 함
-    label:       'ball',
+    restitution:   0,
+    friction:      1,
+    frictionStatic: 0.5, // 레퍼런스와 동일
+    frictionAir:   0.01, // 레퍼런스 Phaser 기본값
+    slop:          0.01,
+    label:         'ball',
   });
 
   ballIdCnt++;
@@ -530,28 +527,7 @@ function renderMergeEffects(now) {
     ctx.lineJoin = 'round';
     ctx.globalCompositeOperation = 'lighter';
 
-    // 안쪽에서 바깥으로 여러 겹이 파앙~ 퍼지는 링.
-    const rings = [
-      { delay: 0.00, size: 0.70, alpha: 0.82, width: 0.050, color: 'rgba(255,255,255,0.95)' },
-      { delay: 0.035, size: 1.02, alpha: 0.48, width: 0.034, color: 'rgba(255,238,142,0.86)' },
-    ];
-
-    rings.forEach(ring => {
-      const local = Math.max(0, Math.min(1, (t - ring.delay) / (1 - ring.delay)));
-      if (local <= 0) return;
-      const rt = 1 - Math.pow(1 - local, 2.4);
-      const alpha = Math.pow(1 - local, 1.35) * ring.alpha;
-      if (alpha <= 0.01) return;
-
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = ring.color;
-      ctx.lineWidth = Math.max(1.2, r * ring.width) * (1 - local * 0.25);
-      ctx.beginPath();
-      ctx.arc(eff.x, eff.y, r * (0.12 + rt * ring.size), 0, Math.PI * 2);
-      ctx.stroke();
-    });
-
-    // 불꽃놀이 알갱이: 안에서 밖으로 여러 개가 순차적으로 퍼짐.
+    // 파티클 알갱이만 표시 (링/도넛 이펙트 없음)
     const particles = eff.particles || [];
     particles.forEach(pt => {
       const localRaw = (now - eff.startTime - pt.delay) / Math.max(1, eff.duration - pt.delay);
