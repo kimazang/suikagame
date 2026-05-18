@@ -269,7 +269,7 @@ body {
 .mob-val   { font-size: 15px; font-weight: 900; color: var(--text); }
 .mob-val.gold { color: var(--gold); }
 .mob-next-group { display: flex; flex-direction: column; align-items: center; margin-left: auto; }
-.mob-next-img   { width: 32px; height: 32px; object-fit: contain; }
+.mob-next-img   { width: 36px; height: 36px; object-fit: contain; }
 
 /* PC 타이틀 */
 .pc-title {
@@ -305,12 +305,23 @@ body {
   z-index: 10;
 }
 
-/* 효과음 OFF 상태 */
-.btn.sound-off {
-  background: rgba(255,255,255,0.4);
-  color: var(--text-dim);
-  opacity: 0.7;
+/* 효과음 토글 버튼 */
+.sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
 }
+.sound-toggle.on  { background: var(--blue);  color: #fff; }
+.sound-toggle.off { background: rgba(255,255,255,0.55); color: var(--text-dim); border: 1.5px solid var(--border); }
 
 /* 캔버스 래퍼 */
 .canvas-wrap {
@@ -545,7 +556,7 @@ body {
     gap: 6px;
   }
 
-  .mobile-controls { display: flex; margin: 0 12px; }
+  .mobile-controls { display: flex; margin: 0 12px; justify-content: center; }
   .mobile-evo-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
 
   /* 캔버스: 양쪽 40px 여백 (터치 공간) */
@@ -554,21 +565,23 @@ body {
     margin: 0 auto;
   }
 
-  /* 진화의 고리: 가로스크롤 없이 wrap */
+  /* 진화의 고리: 한 줄 가로스크롤 */
   .mobile-evolution-row {
-    flex-wrap: wrap;
-    justify-content: center;
-    overflow-x: visible;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
     gap: 6px;
     padding: 4px 8px;
+    -webkit-overflow-scrolling: touch;
   }
   .mobile-evolution-row .ring-item {
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
   }
   .mobile-evolution-row .ring-item img {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
   }
 }
 
