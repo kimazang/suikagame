@@ -430,6 +430,8 @@ let canvas, ctx;
 function initCanvas() {
   canvas = document.getElementById('game-canvas');
   ctx    = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled  = true;
+  ctx.imageSmoothingQuality  = 'high';
   canvas.width  = BOARD_WIDTH;
   canvas.height = BOARD_HEIGHT;
   resizeCanvas();
