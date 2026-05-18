@@ -1217,20 +1217,17 @@ async function init() {
   // 버튼 바인딩
   bind('nickname-confirm-btn', 'click', confirmNickname);
   bind('nickname-input', 'keydown', e => { if (e.key === 'Enter') confirmNickname(); });
-  bind('restart-btn',     'click', restartGame);
-  bind('mob-restart-btn', 'click', restartGame);
-  bind('go-restart-btn',  'click', () => { hideGameoverModal(); restartGame(); });
-  bind('go-ranking-btn',  'click', () => { hideGameoverModal(); showMobileRanking(); });
-  bind('go-nickname-btn', 'click', () => { hideGameoverModal(); showNicknameModal(); });
+  bind('restart-btn',       'click', restartGame);
+  bind('mob-restart-btn',   'click', restartGame);
+  bind('go-restart-btn',    'click', () => { hideGameoverModal(); restartGame(); });
+  bind('go-ranking-btn',    'click', () => { hideGameoverModal(); showMobileRanking(); });
+  bind('go-nickname-btn',   'click', () => { hideGameoverModal(); showNicknameModal(); });
   bind('mob-ranking-btn',   'click', showMobileRanking);
   bind('mob-ranking-close', 'click', hideMobileRanking);
-  bind('mob-change-nick-btn', 'click', showNicknameModal);
-
-  // 옵션 모달
-  bind('options-btn',     'click', showOptionsModal);
-  bind('opt-close-btn',   'click', hideOptionsModal);
-  bind('opt-nickname-btn','click', () => { hideOptionsModal(); showNicknameModal(); });
-  bind('opt-sound-btn',   'click', toggleSound);
+  bind('mob-change-nick-btn',  'click', showNicknameModal);
+  bind('change-nickname-btn',  'click', showNicknameModal);
+  bind('sound-toggle-btn',     'click', toggleSound);
+  bind('mob-sound-btn',        'click', toggleSound);
 
   // 닉네임 없으면 모달
   if (!nickname) { showNicknameModal(); }
@@ -1243,6 +1240,7 @@ async function init() {
   updateScoreUI();
   updateNextPreview();
   buildEvoRing(currentLv);
+  updateSoundButtons();
   showEmptyRanking();
   loadRanking();
 
@@ -1253,16 +1251,20 @@ function bind(id, ev, fn) { const el = document.getElementById(id); if (el) el.a
 function showMobileRanking() { document.getElementById('mobile-ranking-panel').classList.remove('hidden'); }
 function hideMobileRanking() { document.getElementById('mobile-ranking-panel').classList.add('hidden'); }
 
-function showOptionsModal() { document.getElementById('options-modal').classList.remove('hidden'); }
-function hideOptionsModal()  { document.getElementById('options-modal').classList.add('hidden'); }
-
 function toggleSound() {
   soundEnabled = !soundEnabled;
-  const btn = document.getElementById('opt-sound-btn');
-  if (btn) {
-    btn.textContent  = soundEnabled ? 'ON' : 'OFF';
-    btn.className    = soundEnabled ? 'btn btn-orange btn-sm' : 'btn btn-ghost btn-sm';
-  }
+  updateSoundButtons();
+}
+
+function updateSoundButtons() {
+  const label = soundEnabled ? '🔊 효과음 ON' : '🔇 효과음 OFF';
+  const mobLabel = soundEnabled ? '🔊' : '🔇';
+  const cls = soundEnabled ? 'btn btn-ghost btn-sm' : 'btn btn-ghost btn-sm sound-off';
+
+  const pcBtn  = document.getElementById('sound-toggle-btn');
+  const mobBtn = document.getElementById('mob-sound-btn');
+  if (pcBtn)  { pcBtn.textContent = label; pcBtn.className = cls; }
+  if (mobBtn) { mobBtn.textContent = mobLabel; mobBtn.className = cls; }
 }
 
 init();
