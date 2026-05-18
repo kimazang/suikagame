@@ -42,7 +42,7 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
 // 전체 물리 속도 보정
 // 1.00 = 기존 속도, 1.15 = 15% 빠르게, 1.25 = 25% 빠르게
-const PHYSICS_SPEED = 1.18;
+const PHYSICS_SPEED = 1.25;
 const MAX_PHYSICS_DELTA = 50; // 모바일 렉/프레임 저하 시 튐 방지용 상한 ms
 
 // 이미지 URL (여기서 수정)
