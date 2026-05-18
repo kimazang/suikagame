@@ -1,6 +1,6 @@
 /**
  * 갈뚱 만들기 — game.js
- * FIX: cloud.png 이미지 사용, 구름 항상 표시, 흰 테두리 제거, 구슬 공백 보정 유지
+ * FIX: cloud.png 이미지 사용, 구름 항상 표시, 흰 테두리 제거, 구슬 공백 보정 유지, POP 합체 효과
  * - 물리: Matter.js (gravity 2.5, friction 1, restitution 0)
  * - 점수: 레퍼런스 삼각수 기준 [1,3,6,10,15,21,28,36,45,55,66]
  * - 공 크기: 레퍼런스 지름 기준 환산
@@ -484,10 +484,30 @@ function mergeBalls(a, b, level) {
 // 시각 효과
 // ====================================================
 function addMergeEffect(x, y, level, isWatermelon) {
+  // 사과게임처럼 안쪽에서 바깥으로 팡 퍼지는 POP 효과.
+  // 큰 파동 하나만 그리면 밋밋해서, 작은 원/반짝이를 여러 개 동시에 퍼뜨린다.
+  const radius = BALL_RADII[level - 1];
+  const particleCount = isWatermelon ? 18 : 10;
+  const particles = [];
+
+  for (let i = 0; i < particleCount; i++) {
+    const angle = (Math.PI * 2 * i / particleCount) + (Math.random() * 0.45 - 0.225);
+    const distance = radius * (0.42 + Math.random() * 0.42);
+    particles.push({
+      angle,
+      distance,
+      size: isWatermelon ? 3 + Math.random() * 4 : 2 + Math.random() * 3,
+      delay: Math.random() * 70,
+      twinkle: Math.random() > 0.55,
+    });
+  }
+
   mergeEffects.push({
     x, y, level, isWatermelon,
+    radius,
+    particles,
     startTime: Date.now(),
-    duration:  isWatermelon ? 900 : 380,
+    duration:  isWatermelon ? 780 : 520,
   });
 }
 
@@ -564,32 +584,70 @@ function renderFrame() {
   ctx.fillText('DANGER', 6, DANGER_Y - 5);
   ctx.restore();
 
-  // 합체 파동 효과
+  // 합체 POP 효과
   const now = Date.now();
   mergeEffects = mergeEffects.filter(eff => {
-    const t = (now - eff.startTime) / eff.duration;
-    if (t >= 1) return false;
+    const rawT = (now - eff.startTime) / eff.duration;
+    if (rawT >= 1) return false;
+
+    const t = Math.max(0, Math.min(1, rawT));
+    // 초반에 빠르게 튀고 후반에 부드럽게 사라지는 easing
+    const popT = 1 - Math.pow(1 - t, 3);
+    const fade = Math.pow(1 - t, 1.6);
+    const r = eff.radius || BALL_RADII[eff.level - 1];
+
     ctx.save();
-    ctx.globalAlpha = (1 - t) * 0.85;
-    const r = BALL_RADII[eff.level - 1];
-    if (eff.isWatermelon) {
-      ctx.strokeStyle = '#f5a623';
-      ctx.lineWidth   = 5;
+    ctx.lineCap = 'round';
+
+    // 안쪽에서 바깥으로 퍼지는 원형 링 2개
+    const ring1 = r * (0.20 + popT * 0.72);
+    const ring2 = r * (0.05 + popT * 0.48);
+
+    ctx.globalAlpha = fade * 0.9;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = Math.max(2, r * 0.055) * (1 - t * 0.35);
+    ctx.beginPath();
+    ctx.arc(eff.x, eff.y, ring1, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.globalAlpha = fade * 0.65;
+    ctx.strokeStyle = eff.isWatermelon ? 'rgba(255, 218, 82, 0.95)' : 'rgba(255, 232, 120, 0.95)';
+    ctx.lineWidth = Math.max(1.5, r * 0.035);
+    ctx.beginPath();
+    ctx.arc(eff.x, eff.y, ring2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 바깥으로 튀는 작은 동그라미/반짝이
+    const particles = eff.particles || [];
+    particles.forEach(pt => {
+      const localRaw = (now - eff.startTime - pt.delay) / Math.max(1, eff.duration - pt.delay);
+      if (localRaw <= 0 || localRaw >= 1) return;
+
+      const localT = 1 - Math.pow(1 - localRaw, 3);
+      const px = eff.x + Math.cos(pt.angle) * pt.distance * localT;
+      const py = eff.y + Math.sin(pt.angle) * pt.distance * localT;
+      const alpha = Math.pow(1 - localRaw, 1.8);
+      const size = pt.size * (0.55 + localT * 0.7);
+
+      ctx.globalAlpha = alpha * 0.95;
+      ctx.fillStyle = pt.twinkle ? 'rgba(255, 255, 255, 0.98)' : 'rgba(255, 238, 128, 0.95)';
       ctx.beginPath();
-      ctx.arc(eff.x, eff.y, t * 110, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.strokeStyle = '#f5811f';
-      ctx.lineWidth   = 3;
-      ctx.beginPath();
-      ctx.arc(eff.x, eff.y, t * 70, 0, Math.PI * 2);
-      ctx.stroke();
-    } else {
-      ctx.strokeStyle = '#1a88cc';
-      ctx.lineWidth   = 3;
-      ctx.beginPath();
-      ctx.arc(eff.x, eff.y, t * (r + 28), 0, Math.PI * 2);
-      ctx.stroke();
-    }
+      ctx.arc(px, py, size, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (pt.twinkle) {
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(px - size * 2.2, py);
+        ctx.lineTo(px + size * 2.2, py);
+        ctx.moveTo(px, py - size * 2.2);
+        ctx.lineTo(px, py + size * 2.2);
+        ctx.stroke();
+      }
+    });
+
     ctx.restore();
     return true;
   });
