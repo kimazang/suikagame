@@ -530,7 +530,7 @@ body {
 
   .page-wrap {
     grid-template-columns: 1fr;
-    padding: 8px 0 80px;
+    padding: 0 0 80px;
     gap: 8px;
   }
   .left-panel   { display: none; }
@@ -539,40 +539,75 @@ body {
   .pc-controls { display: none !important; }
   .credit       { display: none !important; }
 
-  /* 정보바: 버튼이 잘리지 않게 wrap 허용 */
+  /* 정보바: 한 줄로 전부 표시 */
   .mobile-info-bar {
     display: flex;
-    flex-wrap: wrap;
-    margin: 0 12px;
-    gap: 6px;
-    padding: 8px 10px;
+    flex-wrap: nowrap;
+    align-items: center;
+    margin: 0;
+    padding: 8px 12px;
+    gap: 8px;
+    border-radius: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
-  .mob-next-group { margin-left: 0; }
+  .mob-score-group { min-width: 32px; }
+  .mob-val { font-size: 14px; }
+  .mob-label { font-size: 9px; }
 
-  /* 버튼들은 오른쪽으로 밀기 */
-  .mob-change-nick-area {
-    margin-left: auto;
+  /* 다음 구슬: 라벨+이미지 가로, 배경 구분 */
+  .mob-next-group {
     display: flex;
-    gap: 6px;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    background: var(--panel2);
+    border-radius: 10px;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mob-next-img { width: 32px; height: 32px; }
+
+  /* 닉네임+사운드 버튼 묶음 */
+  .mob-change-nick-area {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
   }
 
-  .mobile-controls { display: flex; margin: 0 12px; justify-content: center; }
-  .mobile-evo-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
-
-  /* 캔버스: 양쪽 40px 여백 (터치 공간) */
+  /* 캔버스: 양쪽 20px 여백 */
   .canvas-wrap {
-    max-width: calc(100% - 80px);
+    max-width: calc(100% - 40px);
     margin: 0 auto;
   }
 
-  /* 진화의 고리: 한 줄 가로스크롤 */
+  /* 하단 버튼: 가운데 정렬 */
+  .mobile-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 12px;
+  }
+
+  /* 진화의 고리: 한 줄 자체 스크롤 */
+  .mobile-evo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+  }
   .mobile-evolution-row {
     flex-wrap: nowrap;
     justify-content: flex-start;
     overflow-x: auto;
     gap: 6px;
-    padding: 4px 8px;
+    padding: 4px 12px;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
+    box-sizing: border-box;
   }
   .mobile-evolution-row .ring-item {
     width: 34px;
