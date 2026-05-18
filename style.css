@@ -516,6 +516,7 @@ body {
 
 @media (max-width: 780px) {
   body { background-attachment: scroll; overflow-x: hidden; }
+
   .page-wrap {
     grid-template-columns: 1fr;
     padding: 8px 0 80px;
@@ -527,16 +528,48 @@ body {
   .pc-controls { display: none !important; }
   .credit       { display: none !important; }
 
-  .mobile-info-bar  { display: flex; margin: 0 14px; }
-  .mobile-controls  { display: flex; margin: 0 14px; }
-  .mobile-evo-wrap  { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; margin: 0 0; }
+  /* 정보바: 버튼이 잘리지 않게 wrap 허용 */
+  .mobile-info-bar {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 12px;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .mob-next-group { margin-left: 0; }
 
-  /* 캔버스: 좌우 여백 확보 (터치 공간) */
+  /* 버튼들은 오른쪽으로 밀기 */
+  .mob-change-nick-area {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+  }
+
+  .mobile-controls { display: flex; margin: 0 12px; }
+  .mobile-evo-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
+
+  /* 캔버스: 양쪽 40px 여백 (터치 공간) */
   .canvas-wrap {
-    max-width: calc(100% - 80px); /* 양쪽 40px씩 여백 */
+    max-width: calc(100% - 80px);
     margin: 0 auto;
   }
 
+  /* 진화의 고리: 가로스크롤 없이 wrap */
+  .mobile-evolution-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    overflow-x: visible;
+    gap: 6px;
+    padding: 4px 8px;
+  }
+  .mobile-evolution-row .ring-item {
+    width: 30px;
+    height: 30px;
+  }
+  .mobile-evolution-row .ring-item img {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 .canvas-wrap.shake-hard {
