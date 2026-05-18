@@ -1,5 +1,6 @@
 /**
  * 갈뚱 만들기 — game.js
+ * FIX: cloud.png 이미지 사용, 구름 항상 표시, 흰 테두리 제거, 구슬 공백 보정 유지
  * - 물리: Matter.js (gravity 2.5, friction 1, restitution 0)
  * - 점수: 레퍼런스 삼각수 기준 [1,3,6,10,15,21,28,36,45,55,66]
  * - 공 크기: 레퍼런스 지름 기준 환산
@@ -54,6 +55,11 @@ const BALL_IMAGES = [
   'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika10.png',
   'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika11.png',
 ];
+
+
+// 구름 이미지 URL — GitHub suikagame 폴더의 cloud.png를 사용
+// github.com/.../blob/... 주소보다 raw.githubusercontent.com 주소가 이미지 로딩에 안정적이다.
+const CLOUD_IMAGE_URL = 'https://raw.githubusercontent.com/kimazang/suikagame/main/cloud.png';
 
 // 단계별 반지름 (레퍼런스 기준 지름/2)
 // 1:32 2:46 3:60 4:70 5:85 6:110 7:130 8:155 9:180(추정) 10:220 11:260
@@ -218,6 +224,7 @@ const imgs = new Array(11).fill(null);
 // 원본 이미지를 매 프레임 바로 축소/회전해서 그리면 모바일에서 가장자리가 지글지글해 보일 수 있어서,
 // 처음 로딩할 때 단계별 크기에 맞춘 고해상도 원형 구슬 이미지를 미리 만들어둔다.
 const ballSprites = new Array(11).fill(null);
+let cloudImg = null;
 
 function createBallSprite(img, level) {
   const radius = BALL_RADII[level - 1];
@@ -243,22 +250,41 @@ function createBallSprite(img, level) {
   return off;
 }
 
+function loadCloudImage() {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      cloudImg = img;
+      resolve();
+    };
+    img.onerror = () => {
+      console.warn('[큐플] cloud.png 로드 실패:', CLOUD_IMAGE_URL);
+      cloudImg = null;
+      resolve();
+    };
+    img.src = CLOUD_IMAGE_URL;
+  });
+}
+
 function loadImages() {
-  return Promise.all(
-    BALL_IMAGES.map((url, i) =>
-      new Promise(resolve => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload  = () => {
-          imgs[i] = img;
-          ballSprites[i] = createBallSprite(img, i + 1);
-          resolve();
-        };
-        img.onerror = () => { imgs[i] = null; resolve(); };
-        img.src = url;
-      })
-    )
+  const ballImagePromises = BALL_IMAGES.map((url, i) =>
+    new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload  = () => {
+        imgs[i] = img;
+        ballSprites[i] = createBallSprite(img, i + 1);
+        resolve();
+      };
+      img.onerror = () => { imgs[i] = null; resolve(); };
+      img.src = url;
+    })
   );
+
+  // 공 이미지와 구름 이미지를 함께 미리 로드한다.
+  // 그래야 게임 시작 후 구름이 늦게 나타나거나 깜빡이는 느낌이 줄어든다.
+  return Promise.all([...ballImagePromises, loadCloudImage()]);
 }
 
 // ====================================================
@@ -483,55 +509,23 @@ function resizeCanvas() {
   canvas.style.height = (BOARD_HEIGHT * dw / BOARD_WIDTH) + 'px';
 }
 
-function drawCloudHolder(x, y, scale = 0.68) {
+function drawCloudHolder(x, ballRadius) {
+  // 사용자가 직접 만든 cloud.png만 사용한다.
+  // 코드로 그린 구름 fallback은 일부러 넣지 않는다. 이상한 임시 구름이 보이면 더 거슬리기 때문.
+  if (!cloudImg || !cloudImg.complete || !cloudImg.naturalWidth) return;
+
+  const cloudW = 92;
+  const cloudH = cloudW * (cloudImg.naturalHeight / cloudImg.naturalWidth);
+
+  // 구름은 현재 떨어질 공의 바로 위에서 항상 대기한다.
+  // 공이 커져도 천장에 붙지 않게 최소 y값만 잡고, 공 윗부분과 살짝 겹치게 둔다.
+  const cloudBottom = DROP_Y - ballRadius + 14;
+  const cloudY = Math.max(6, cloudBottom - cloudH);
+
   ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-
-  // 은은한 그림자
-  ctx.fillStyle = 'rgba(91, 53, 28, 0.10)';
-  ctx.beginPath();
-  ctx.ellipse(0, 31, 54, 12, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 구름 본체 — 기존 UI를 건드리지 않는 장식용
-  ctx.fillStyle = '#fff1a8';
-  ctx.strokeStyle = '#f2cf58';
-  ctx.lineWidth = 4;
-  ctx.lineJoin = 'round';
-
-  ctx.beginPath();
-  ctx.arc(-32, 5, 19, 0, Math.PI * 2);
-  ctx.arc(-13, -12, 24, 0, Math.PI * 2);
-  ctx.arc(14, -12, 25, 0, Math.PI * 2);
-  ctx.arc(34, 5, 20, 0, Math.PI * 2);
-  ctx.arc(5, 13, 28, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // 얼굴
-  ctx.fillStyle = '#5b5144';
-  ctx.beginPath();
-  ctx.arc(-10, 1, 2.1, 0, Math.PI * 2);
-  ctx.arc(12, 1, 2.1, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = '#5b5144';
-  ctx.lineWidth = 3;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.arc(1, 8, 6, 0, Math.PI);
-  ctx.stroke();
-
-  // 작은 손 느낌
-  ctx.strokeStyle = '#79c765';
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(6, 21);
-  ctx.quadraticCurveTo(15, 29, 24, 22);
-  ctx.stroke();
-
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(cloudImg, x - cloudW / 2, cloudY, cloudW, cloudH);
   ctx.restore();
 }
 
@@ -631,21 +625,24 @@ function renderFrame() {
     ctx.restore();
   });
 
-  // 대기 공 표시
-  if (canDrop && !gameOver) {
+  // 대기 공 / 구름 표시
+  // IMPORTANT:
+  // 기존에는 canDrop일 때만 대기 공과 구름을 그려서,
+  // 공을 떨어뜨린 직후 쿨다운 600ms 동안 구름이 사라지는 것처럼 보였다.
+  // 그래서 렉 걸리는 듯한 끊김이 생겼다.
+  // 이제 구름과 현재 대기 공은 게임오버가 아니면 항상 위에서 마우스를 따라다닌다.
+  if (!gameOver) {
     const lv     = currentLv;
     const radius = BALL_RADII[lv - 1];
     const img    = ballSprites[lv - 1] || imgs[lv - 1];
     const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
+    const cloudX = Math.max(46, Math.min(BOARD_WIDTH - 46, safeX));
 
-    // 현재 떨어질 공 뒤쪽에 구름만 추가한다. 게임 로직/기존 UI는 건드리지 않는다.
-    // 공에 완전히 가려지지 않도록 공 반지름에 맞춰 구름을 조금 위로 올린다.
-    const cloudX = Math.max(52, Math.min(BOARD_WIDTH - 52, safeX));
-    const cloudY = Math.max(34, DROP_Y - radius - 24);
-    drawCloudHolder(cloudX, cloudY, 0.68);
+    // cloud.png를 현재 공 뒤/위에 먼저 그린다.
+    drawCloudHolder(cloudX, radius);
 
     ctx.save();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = canDrop ? 1 : 0.92;
     ctx.translate(safeX, DROP_Y);
 
     const canDrawImage =
