@@ -1337,8 +1337,27 @@ async function init() {
   bind('mob-sound-btn',        'click', toggleSound);
 
   // 닉네임 없으면 모달
-  if (!nickname) { showNicknameModal(); }
-  else { updatePlayerDisplay(); }
+if (!nickname) {
+  showNicknameModal();
+} else {
+  updatePlayerDisplay();
+
+  // 기존 localStorage 닉네임도 nicknames 컬렉션에 선점 등록 시도
+  reserveNickname(nickname).catch(e => {
+    console.warn('[큐플] 기존 닉네임 선점 확인 실패:', e);
+
+    // 다른 사람이 이미 선점한 닉네임이면 기존 닉네임을 비우고 다시 입력받음
+    if (e && e.message === 'NICKNAME_TAKEN') {
+      nickname = '';
+      lsSet(LS.NICKNAME, '');
+      showNicknameModal();
+      const errEl = document.getElementById('nickname-error');
+      if (errEl) {
+        errEl.textContent = '이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.';
+      }
+    }
+  });
+}
 
   // 첫 공은 무조건 1단계
   currentLv = 1;
