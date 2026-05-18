@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>갈뚱 만들기 🤎</title>
-  <meta name="description" content="큐플레이 캐릭터를 합쳐 갈뚱을 만들어 보세요!" />
+  <title>1991 만들기 🫦</title>
+  <meta name="description" content="큐플레이 캐릭터를 합쳐 1991을 만들어 보세요!" />
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/kimazang/suikagame/main/favicon.png" />
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/kimazang/suikagame/main/favicon.png" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="갈뚱 만들기 🤎" />
-  <meta property="og:description" content="큐플레이 캐릭터를 합쳐 갈뚱을 만들어 보세요!" />
+  <meta property="og:title" content="1991 만들기 🫦" />
+  <meta property="og:description" content="큐플레이 캐릭터를 합쳐 1991을 만들어 보세요!" />
   <meta property="og:image" content="https://raw.githubusercontent.com/kimazang/suikagame/main/preview.png" />
   <meta property="og:url" content="https://kimazang.github.io/suikagame/" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="갈뚱 만들기 🤎" />
-  <meta name="twitter:description" content="큐플레이 캐릭터를 합쳐 갈뚱을 만들어 보세요!" />
+  <meta name="twitter:title" content="1991 만들기 🫦" />
+  <meta name="twitter:description" content="큐플레이 캐릭터를 합쳐 1991을 만들어 보세요!" />
   <meta name="twitter:image" content="https://raw.githubusercontent.com/kimazang/suikagame/main/preview.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -26,8 +26,8 @@
   <!-- 닉네임 모달 -->
   <div id="nickname-modal" class="overlay">
     <div class="modal-box">
-      <div class="modal-emoji">🤎</div>
-      <h2 class="modal-title">갈뚱 만들기</h2>
+      <div class="modal-emoji">🫦</div>
+      <h2 class="modal-title">1991 만들기</h2>
       <p class="modal-desc">닉네임을 설정하면 랭킹에 기록돼요.<br>2~10글자로 입력해주세요.</p>
       <input type="text" id="nickname-input" class="nickname-input"
         maxlength="10" placeholder="닉네임 입력" autocomplete="off" />
@@ -44,19 +44,19 @@
       <div id="go-player" class="go-player"></div>
       <div class="go-stats-grid">
         <div class="go-stat-item">
-          <div class="go-stat-label">이번 큐포인트</div>
+          <div class="go-stat-label">현재 점수</div>
           <div id="go-score" class="go-stat-val"></div>
         </div>
         <div class="go-stat-item">
-          <div class="go-stat-label">최고 큐포인트</div>
+          <div class="go-stat-label">최고 점수</div>
           <div id="go-best" class="go-stat-val gold"></div>
         </div>
         <div class="go-stat-item">
-          <div class="go-stat-label">이번 판 갈뚱 기록</div>
+          <div class="go-stat-label">이번 판 1991</div>
           <div id="go-wm" class="go-stat-val"></div>
         </div>
         <div class="go-stat-item">
-          <div class="go-stat-label">갈뚱 최고 기록</div>
+          <div class="go-stat-label">1991 최고 기록</div>
           <div id="go-best-wm" class="go-stat-val gold"></div>
         </div>
       </div>
@@ -70,7 +70,7 @@
   </div>
 
   <!-- PC 타이틀 -->
-  <div class="pc-title">🤎 갈뚱 만들기</div>
+  <div class="pc-title">🫦 1991 만들기</div>
 
   <!-- 페이지 레이아웃 -->
   <div class="page-wrap">
@@ -82,22 +82,22 @@
       </div>
       <div class="score-card">
         <div class="score-item">
-          <div class="score-label">최고 큐포인트</div>
+          <div class="score-label">최고 점수</div>
           <div id="best-display" class="score-val gold">0</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">갈뚱 최고 기록 🤎</div>
+          <div class="score-label">1991 최고 기록 🫦</div>
           <div id="best-wm-display" class="score-val gold">0개</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">현재 큐포인트</div>
+          <div class="score-label">현재 점수</div>
           <div id="score-display" class="score-val">0</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">이번 판 갈뚱 🤎</div>
+          <div class="score-label">이번 판 1991 🫦</div>
           <div id="wm-display" class="score-val">0개</div>
         </div>
       </div>
@@ -118,7 +118,7 @@
           <span id="mob-best" class="mob-val gold">0</span>
         </div>
         <div class="mob-score-group">
-          <span class="mob-label">갈뚱🤎</span>
+          <span class="mob-label">1991🫦</span>
           <span id="mob-wm" class="mob-val">0</span>
         </div>
         <div class="mob-next-group">
@@ -153,7 +153,7 @@
 
       <!-- 모바일 진화의 고리 -->
       <div class="mobile-evo-wrap">
-        <div class="mobile-evo-label">갈뚱 제작법</div>
+        <div class="mobile-evo-label">1991 제작법</div>
         <div id="mobile-evolution-row" class="mobile-evolution-row"></div>
       </div>
     </main>
@@ -166,7 +166,7 @@
           <img id="next-ball-img" class="next-ball-img" alt="다음 공" />
         </div>
       </div>
-      <div class="panel-logo">갈뚱 제작법</div>
+      <div class="panel-logo">1991 제작법</div>
       <div id="evolution-ring" class="evolution-ring"></div>
     </aside>
   </div>
