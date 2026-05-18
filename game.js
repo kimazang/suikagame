@@ -14,7 +14,7 @@
 // ====================================================
 import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc,
-         collection, query, orderBy, limit,
+         collection, query, orderBy, limit, where,
          getDocs, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
@@ -827,7 +827,6 @@ async function endGame() {
 // ====================================================
 function restartGame() {
   gameOver = false; canDrop = true;
-  lastFrameTime = performance.now();
   score = 0; watermelonCount = 0;
   ballIdCnt = 0;
   proximityCheckFrame = 0;
@@ -850,21 +849,12 @@ function restartGame() {
 // ====================================================
 // 메인 게임 루프
 // ====================================================
-// 모바일에서 프레임이 떨어져도 실제 시간 기준으로 비슷한 속도로 떨어지게 한다.
-// 기존처럼 Engine.update(engine, 1000 / 60) 고정값을 쓰면,
-// 30fps 기기에서는 물리 업데이트도 절반만 진행되어 공이 느리게 떨어져 보일 수 있다.
-let lastFrameTime = performance.now();
-
-function gameLoop(now = performance.now()) {
-  const delta = Math.min(now - lastFrameTime, 1000 / 30);
-  lastFrameTime = now;
-
+function gameLoop() {
   if (!gameOver) {
-    Engine.update(engine, delta);
+    Engine.update(engine, 1000 / 60);
     checkGameOver();
     checkProximityMerges();
   }
-
   renderFrame();
 
   if (!gameOver) {
@@ -1126,17 +1116,71 @@ function showNicknameModal() {
 }
 function hideNicknameModal() { document.getElementById('nickname-modal').classList.add('hidden'); }
 
-function confirmNickname() {
-  const input = document.getElementById('nickname-input').value.trim();
+async function isNicknameAlreadyUsed(input) {
+  // 최소 중복 방지:
+  // 이미 scores 컬렉션에 저장된 닉네임이면 다른 사람이 다시 사용할 수 없게 막는다.
+  // 단, 아직 점수를 저장한 적 없는 닉네임까지 선점하진 않는다.
+  if (!firebaseEnabled || !db) return false;
+
+  const q = query(collection(db, 'scores'), where('nickname', '==', input), limit(10));
+  const snap = await getDocs(q);
+
+  let usedByOther = false;
+  snap.forEach(d => {
+    const data = d.data();
+    if (data.playerId && data.playerId !== playerId) {
+      usedByOther = true;
+    }
+  });
+
+  return usedByOther;
+}
+
+async function confirmNickname() {
+  const inputEl = document.getElementById('nickname-input');
+  const input = inputEl.value.trim();
   const errEl = document.getElementById('nickname-error');
+  const btn = document.getElementById('nickname-confirm-btn');
+
   if (input.length < 2 || input.length > 10) {
     errEl.textContent = '닉네임은 2~10글자여야 해요.';
     return;
   }
-  nickname = input;
-  lsSet(LS.NICKNAME, nickname);
-  updatePlayerDisplay();
-  hideNicknameModal();
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '확인 중...';
+  }
+  errEl.textContent = '닉네임 확인 중...';
+
+  try {
+    const duplicated = await isNicknameAlreadyUsed(input);
+
+    if (duplicated) {
+      errEl.textContent = '이미 기록이 있는 닉네임이에요. 다른 닉네임을 입력해주세요.';
+      return;
+    }
+
+    nickname = input;
+    lsSet(LS.NICKNAME, nickname);
+    updatePlayerDisplay();
+    hideNicknameModal();
+  } catch (e) {
+    console.warn('[큐플] 닉네임 중복 확인 실패:', e);
+
+    // 배포 안정성 우선:
+    // Firebase 확인이 잠깐 실패해도 게임 시작 자체가 막히지 않게 한다.
+    // 단, 랭킹/상품 확인 시 중복·식별 불가 닉네임은 제외 안내 필요.
+    nickname = input;
+    lsSet(LS.NICKNAME, nickname);
+    updatePlayerDisplay();
+    hideNicknameModal();
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '시작하기 🚀';
+    }
+  }
 }
 
 // ====================================================
@@ -1268,7 +1312,6 @@ async function init() {
   showEmptyRanking();
   loadRanking();
 
-  lastFrameTime = performance.now();
   requestAnimationFrame(gameLoop);
 }
 
