@@ -210,13 +210,59 @@ function playMergeSound(level) {
 // ====================================================
 const imgs = new Array(11).fill(null);
 
+// 인게임 공 이미지 품질 개선용 프리렌더 스프라이트
+// 원본 이미지를 매 프레임 바로 축소/회전해서 그리면 모바일에서 가장자리가 지글지글해 보일 수 있어서,
+// 처음 로딩할 때 단계별 크기에 맞춘 고해상도 원형 구슬 이미지를 미리 만들어둔다.
+const ballSprites = new Array(11).fill(null);
+
+function createBallSprite(img, level) {
+  const radius = BALL_RADII[level - 1];
+  const size   = radius * 2;
+  const scale  = 4; // 고해상도 프리렌더. 3~4 정도가 품질/성능 균형이 좋음
+  const s      = size * scale;
+
+  const off = document.createElement('canvas');
+  off.width  = s;
+  off.height = s;
+
+  const octx = off.getContext('2d');
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+
+  // 원형으로 부드럽게 클리핑
+  octx.save();
+  octx.beginPath();
+  octx.arc(s / 2, s / 2, s / 2 - 2 * scale, 0, Math.PI * 2);
+  octx.clip();
+
+  // 이미지 끝부분이 딱 잘리면서 뾰족해 보이는 걸 막기 위해 아주 살짝 안쪽으로 넣음
+  const pad = Math.max(1, Math.round(size * 0.025)) * scale;
+  octx.drawImage(img, pad, pad, s - pad * 2, s - pad * 2);
+  octx.restore();
+
+  // 하단 제작법 아이콘처럼 정돈돼 보이도록 은은한 흰 테두리 추가
+  octx.save();
+  octx.beginPath();
+  octx.arc(s / 2, s / 2, s / 2 - 2 * scale, 0, Math.PI * 2);
+  octx.lineWidth = 2.5 * scale;
+  octx.strokeStyle = 'rgba(255,255,255,0.9)';
+  octx.stroke();
+  octx.restore();
+
+  return off;
+}
+
 function loadImages() {
   return Promise.all(
     BALL_IMAGES.map((url, i) =>
       new Promise(resolve => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload  = () => { imgs[i] = img; resolve(); };
+        img.onload  = () => {
+          imgs[i] = img;
+          ballSprites[i] = createBallSprite(img, i + 1);
+          resolve();
+        };
         img.onerror = () => { imgs[i] = null; resolve(); };
         img.src = url;
       })
@@ -453,6 +499,9 @@ function toGameX(clientX) {
 }
 
 function renderFrame() {
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
   // 배경
   ctx.fillStyle = '#d6eeff';
   ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
@@ -508,7 +557,7 @@ function renderFrame() {
 
     const { level } = body.gameData;
     const radius = BALL_RADII[level - 1];
-    const img    = imgs[level - 1];
+    const img    = ballSprites[level - 1] || imgs[level - 1];
     const { x, y } = body.position;
 
     ctx.save();
@@ -535,7 +584,7 @@ function renderFrame() {
   if (canDrop && !gameOver) {
     const lv     = currentLv;
     const radius = BALL_RADII[lv - 1];
-    const img    = imgs[lv - 1];
+    const img    = ballSprites[lv - 1] || imgs[lv - 1];
     const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
 
     ctx.save();
