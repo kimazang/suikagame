@@ -564,7 +564,14 @@ function renderFrame() {
     ctx.translate(x, y);
     ctx.rotate(body.angle);
 
-    if (img && img.complete && img.naturalWidth > 0) {
+    const canDrawImage =
+      img &&
+      (
+        img instanceof HTMLCanvasElement ||
+        (img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0)
+      );
+
+    if (canDrawImage) {
       ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
     } else {
       ctx.beginPath();
@@ -591,7 +598,14 @@ function renderFrame() {
     ctx.globalAlpha = 1;
     ctx.translate(safeX, DROP_Y);
 
-    if (img && img.complete && img.naturalWidth > 0) {
+    const canDrawImage =
+      img &&
+      (
+        img instanceof HTMLCanvasElement ||
+        (img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0)
+      );
+
+    if (canDrawImage) {
       ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
     } else {
       ctx.fillStyle = FALLBACK_COLORS[lv - 1];
