@@ -16,6 +16,9 @@
   <meta name="twitter:title" content="갈뚱 만들기 🤎" />
   <meta name="twitter:description" content="큐플레이 캐릭터를 합쳐 갈뚱을 만들어 보세요!" />
   <meta name="twitter:image" content="https://raw.githubusercontent.com/kimazang/suikagame/main/preview.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -66,27 +69,13 @@
     </div>
   </div>
 
-  <!-- 옵션 모달 -->
-  <div id="options-modal" class="overlay hidden">
-    <div class="modal-box">
-      <div class="modal-emoji">⚙️</div>
-      <h2 class="modal-title">옵션</h2>
-      <div class="options-list">
-        <div class="option-row">
-          <span class="option-label">✏️ 닉네임 변경</span>
-          <button id="opt-nickname-btn" class="btn btn-blue btn-sm">변경</button>
-        </div>
-        <div class="option-row">
-          <span class="option-label">🔊 효과음</span>
-          <button id="opt-sound-btn" class="btn btn-orange btn-sm">ON</button>
-        </div>
-      </div>
-      <button id="opt-close-btn" class="btn btn-ghost btn-full" style="margin-top:16px">닫기</button>
-    </div>
-  </div>
-
   <!-- PC 타이틀 -->
   <div class="pc-title">🤎 갈뚱 만들기</div>
+  <!-- PC 퀵 버튼 (닉네임/효과음) -->
+  <div class="pc-quick-btns">
+    <button id="change-nickname-btn" class="btn btn-ghost btn-sm">✏️ 닉네임 변경</button>
+    <button id="sound-toggle-btn" class="btn btn-ghost btn-sm">🔊 효과음 ON</button>
+  </div>
 
   <!-- 페이지 레이아웃 -->
   <div class="page-wrap">
@@ -142,6 +131,7 @@
           <img id="mob-next-img" class="mob-next-img" alt="" />
         </div>
         <button id="mob-change-nick-btn" class="btn btn-ghost btn-sm">✏️</button>
+        <button id="mob-sound-btn" class="btn btn-ghost btn-sm">🔊</button>
       </div>
 
       <!-- 캔버스 -->
@@ -152,7 +142,6 @@
       <!-- PC 하단 버튼 -->
       <div class="pc-controls">
         <button id="restart-btn" class="btn btn-orange">🔄 처음부터</button>
-        <button id="options-btn" class="btn btn-ghost">⚙️ 옵션</button>
       </div>
 
       <!-- 모바일 하단 버튼 -->
