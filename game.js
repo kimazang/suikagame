@@ -725,6 +725,7 @@ function renderFrame() {
 
       ctx.restore();
     }
+  }
 
   if (gameOver) {
     ctx.fillStyle = 'rgba(200,230,255,0.4)';
