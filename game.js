@@ -150,7 +150,7 @@ function getAudio() {
   } catch (e) { return null; }
 }
 
-// 드롭 효과음: 가볍게 뚝 떨어지는 느낌
+// 드롭 효과음: 귀여운 뽕~
 function playDropSound() {
   const ctx = getAudio();
   if (!ctx) return;
@@ -160,61 +160,65 @@ function playDropSound() {
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(600, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.06);
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    osc.frequency.setValueAtTime(900, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
     osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.09);
+    osc.stop(ctx.currentTime + 0.11);
   } catch (e) {}
 }
 
-// 합체 효과음: 방울 터지는 뽁! 느낌 (레벨 높을수록 낮고 통통)
+// 합체 효과음: 러블리 뽕뽕! (레벨 높을수록 조금 더 낮고 풍성하게)
 function playMergeSound(level) {
   const ctx = getAudio();
   if (!ctx) return;
   try {
-    // 레벨 높을수록 더 낮고 묵직한 뽁
-    const freq = 900 - level * 55;
+    // 1단계=1200Hz 귀엽고 높음, 11단계=700Hz 조금 더 낮고 통통
+    const baseFreq = 1200 - level * 45;
 
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    // 노이즈 느낌 위한 필터
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = freq;
-    filter.Q.value = 0.8;
+    // 뽕! 메인 사운드
+    const osc1  = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(baseFreq * 0.6, ctx.currentTime + 0.1);
+    gain1.gain.setValueAtTime(0.28, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.16);
 
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
+    // 하모닉 — 더 통통하고 귀여운 느낌
+    const osc2  = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(baseFreq * 1.5, ctx.currentTime);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 0.9, ctx.currentTime + 0.08);
+    gain2.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    osc2.start(ctx.currentTime);
+    osc2.stop(ctx.currentTime + 0.11);
 
-    osc.type = 'sine';
-    // 뽁! 하고 빠르게 꺼지는 피치
-    osc.frequency.setValueAtTime(freq * 1.6, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, ctx.currentTime + 0.07);
-
-    gain.gain.setValueAtTime(0.35, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.13);
-
-    // 갈뚱(11단계) 완성 시 — 뽁뽁뽁 연속
+    // 갈뚱(11단계) — 뽕뽕뽕뽕 귀엽게 연속
     if (level === 11) {
-      [0, 0.10, 0.20, 0.30].forEach((delay, i) => {
+      const melody = [1200, 1400, 1100, 1600];
+      melody.forEach((freq, i) => {
+        const delay = i * 0.11;
         const o = ctx.createOscillator();
         const g = ctx.createGain();
         o.connect(g);
         g.connect(ctx.destination);
-        const f = 500 - i * 40;
         o.type = 'sine';
-        o.frequency.setValueAtTime(f * 1.5, ctx.currentTime + delay);
-        o.frequency.exponentialRampToValueAtTime(f * 0.5, ctx.currentTime + delay + 0.08);
-        g.gain.setValueAtTime(0.3, ctx.currentTime + delay);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.12);
+        o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        o.frequency.exponentialRampToValueAtTime(freq * 0.6, ctx.currentTime + delay + 0.09);
+        g.gain.setValueAtTime(0.25, ctx.currentTime + delay);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.13);
         o.start(ctx.currentTime + delay);
-        o.stop(ctx.currentTime + delay + 0.13);
+        o.stop(ctx.currentTime + delay + 0.14);
       });
     }
   } catch (e) {}
