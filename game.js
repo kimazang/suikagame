@@ -202,7 +202,7 @@ function playMergeSound(level) {
     const vol  = 0.22 + level * 0.01;
     playBubblePop(actx, freq, vol);
 
-    // 갈뚱(11단계) — 퐁퐁퐁퐁 연속
+    // 구일(11단계) — 퐁퐁퐁퐁 연속
     if (level === 11) {
       [700, 900, 800, 1100].forEach((f, i) => {
         playBubblePop(actx, f, 0.2, (i + 1) * 0.1);
@@ -958,7 +958,7 @@ function renderRanking(data, myRankData = null) {
           <span class="rank-num">${i + 1}</span>
           <span class="rank-nick">${escHtml(item.nickname)}</span>
           <span class="rank-score">${(item.score||0).toLocaleString()}P</span>
-          <span class="rank-wm">🤎${item.watermelonCount||0}</span>
+          <span class="rank-wm">🫦${item.watermelonCount||0}</span>
         </div>`;
     } else {
       return `
@@ -978,7 +978,7 @@ function renderRanking(data, myRankData = null) {
       <span class="rank-num">${myRankData.rank}</span>
       <span class="rank-nick">${escHtml(myRankData.nickname)}</span>
       <span class="rank-score">${(myRankData.score||0).toLocaleString()}P</span>
-      <span class="rank-wm">🤎${myRankData.watermelonCount||0}</span>
+      <span class="rank-wm">🫦${myRankData.watermelonCount||0}</span>
     </div>` : '';
 
   const html = rows + myRow;
@@ -1086,7 +1086,7 @@ function showGameoverModal(scoreUpdated, wmUpdated) {
 
   let msg = '아쉽지만 최고 기록에는 도달하지 못했어요.';
   if (scoreUpdated)   msg = '🎉 최고 기록 갱신! 랭킹에 반영됐어요.';
-  else if (wmUpdated) msg = '🤎 갈뚱 기록 갱신! 더 많이 만들었어요.';
+  else if (wmUpdated) msg = '🫦 1991 기록 갱신! 더 많이 만들었어요.';
   setText('go-message', msg);
 
   document.getElementById('gameover-modal').classList.remove('hidden');
