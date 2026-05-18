@@ -43,17 +43,17 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika1.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika2.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika3.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika4.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika5.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika6.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika7.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika8.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika9.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika10.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika11.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika1.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika2.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika3.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika4.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika5.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika6.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika7.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika8.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika9.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika10.png',
+  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika11.png',
 ];
 
 // 단계별 반지름 (여기서 수정)
@@ -62,14 +62,7 @@ const BALL_RADII = [19, 25, 33, 43, 55, 69, 85, 103, 123, 145, 168];
 // 합체 점수 (새로 생성된 단계 기준, 여기서 수정)
 const MERGE_SCORES = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66];
 
-// 드롭 확률 [단계, 누적확률]
-const DROP_WEIGHTS = [
-  [1, 0.20],
-  [2, 0.40],
-  [3, 0.60],
-  [4, 0.80],
-  [5, 1.00],
-];
+// 드롭 확률: 1~5단계 균등
 
 // localStorage 키
 const LS = {
@@ -242,7 +235,7 @@ let engine, world;
 function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
-  engine.gravity.y = 1.5;
+  engine.gravity.y = 2.5;
 
   const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
 World.add(world, [
@@ -273,7 +266,7 @@ function randomDropLevel() {
 // ====================================================
 // 공 생성
 // ====================================================
-function createBall(x, y, level, fromMerge = false) {
+function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
     restitution: 0,
@@ -287,7 +280,6 @@ function createBall(x, y, level, fromMerge = false) {
   uid:       ballIdCnt,
   isMerging: false,
   spawnTime: Date.now(),
-  popScale:  1.0,
 };
 
   World.add(world, body);
@@ -306,7 +298,7 @@ function dropBall() {
   const radius = BALL_RADII[lv - 1];
   const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
 
-  createBall(safeX, DROP_Y, lv, false);
+  createBall(safeX, DROP_Y, lv);
   playDropSound(); // [7] 드롭 효과음
 
   currentLv = nextLv;
@@ -356,6 +348,7 @@ let proximityCheckFrame = 0;
 function checkProximityMerges() {
   proximityCheckFrame++;
   if (gameOver) return;
+  if (proximityCheckFrame % 3 !== 0) return; // 3프레임마다 1회만 실행
 
   const len = activeBodies.length;
 
@@ -413,7 +406,7 @@ function mergeBalls(a, b, level) {
 
   playMergeSound(newLevel); // [7] 합체 효과음
   addMergeEffect(mx, my, newLevel, isWatermelon);
-  createBall(mx, my, newLevel, true);
+  createBall(mx, my, newLevel);
   updateScoreUI();
 }
 
@@ -510,18 +503,16 @@ function renderFrame() {
   Composite.allBodies(world).forEach(body => {
     if (body.label !== 'ball' || !body.gameData) return;
 
-    const { level, popScale } = body.gameData;
+    const { level } = body.gameData;
     const radius = BALL_RADII[level - 1];
     const img    = imgs[level - 1];
     const { x, y } = body.position;
 
-    if (popScale < 1) body.gameData.popScale = Math.min(1, popScale + 0.15);
-    const scale = body.gameData.popScale;
 
     ctx.save();
 ctx.translate(x, y);
 ctx.rotate(body.angle);
-ctx.scale(scale, scale);
+ctx.scale(1, 1);
 ctx.beginPath();
 ctx.arc(0, 0, radius, 0, Math.PI * 2);
 ctx.closePath();
@@ -911,13 +902,16 @@ function initInput() {
   canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     if (gameOver) return;
-    dropX = toGameX(e.touches[0].clientX);
+    const rawX = toGameX(e.touches[0].clientX);
+    dropX = Math.max(0, Math.min(BOARD_WIDTH, rawX));
   }, { passive: false });
 
   canvas.addEventListener('touchmove', e => {
     e.preventDefault();
     if (gameOver) return;
-    dropX = toGameX(e.touches[0].clientX);
+    const rect = canvas.getBoundingClientRect();
+    const rawX = toGameX(e.touches[0].clientX);
+    dropX = Math.max(0, Math.min(BOARD_WIDTH, rawX));
   }, { passive: false });
 
   canvas.addEventListener('touchend', e => {
@@ -925,6 +919,34 @@ function initInput() {
     if (gameOver || !canDrop) return;
     dropBall();
   }, { passive: false });
+
+  // ── 터치: 캔버스 바깥 파란 영역도 받기 ──
+  document.addEventListener('touchstart', e => {
+    if (gameOver) return;
+    const touch = e.touches[0];
+    const rect  = canvas.getBoundingClientRect();
+    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+        touch.clientY >= rect.top  && touch.clientY <= rect.bottom) return;
+    dropX = Math.max(0, Math.min(BOARD_WIDTH, toGameX(touch.clientX)));
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (gameOver) return;
+    const touch = e.touches[0];
+    const rect  = canvas.getBoundingClientRect();
+    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+        touch.clientY >= rect.top  && touch.clientY <= rect.bottom) return;
+    dropX = Math.max(0, Math.min(BOARD_WIDTH, toGameX(touch.clientX)));
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (gameOver || !canDrop) return;
+    const touch = e.changedTouches[0];
+    const rect  = canvas.getBoundingClientRect();
+    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+        touch.clientY >= rect.top  && touch.clientY <= rect.bottom) return;
+    dropBall();
+  }, { passive: true });
 }
 
 // ====================================================
