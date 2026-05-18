@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
 /* =====================================================
    큐플 합치기 — style.css
    테마: 큐플레이 스타일 (밝은 파란색)
@@ -159,7 +161,7 @@ body {
   gap: 18px;
   max-width: 1160px;
   margin: 0 auto;
-  padding: 10px 14px 40px;
+  padding: 4px 14px 40px;
   align-items: start;
 }
 
@@ -257,27 +259,28 @@ body {
   background: var(--panel);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 8px 10px;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   box-shadow: var(--shadow);
 }
-.mob-score-group { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.mob-score-group { display: flex; flex-direction: column; align-items: center; min-width: 38px; }
 .mob-label { font-size: 10px; color: var(--text-dim); font-weight: 700; }
-.mob-val   { font-size: 16px; font-weight: 900; color: var(--text); }
+.mob-val   { font-size: 15px; font-weight: 900; color: var(--text); }
 .mob-val.gold { color: var(--gold); }
 .mob-next-group { display: flex; flex-direction: column; align-items: center; margin-left: auto; }
-.mob-next-img   { width: 36px; height: 36px; object-fit: contain; }
+.mob-next-img   { width: 32px; height: 32px; object-fit: contain; }
 
 /* PC 타이틀 */
 .pc-title {
   text-align: center;
-  font-size: 26px;
-  font-weight: 900;
+  font-size: 38px;
+  font-family: 'Jua', sans-serif;
+  font-weight: 400;
   color: var(--white);
-  letter-spacing: 1px;
-  padding: 14px 0 0;
-  text-shadow: 0 2px 8px rgba(0,80,160,0.25);
+  letter-spacing: 2px;
+  padding: 48px 0 8px;
+  text-shadow: 0 3px 12px rgba(0,80,160,0.3), 0 1px 0 rgba(255,255,255,0.3);
 }
 
 /* PC 하단 버튼 */
@@ -287,6 +290,14 @@ body {
   width: 100%;
   max-width: 544px;
   justify-content: center;
+}
+
+/* PC 상단 퀵 버튼 (닉네임, 효과음) */
+.pc-quick-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 0 0 4px;
 }
 
 /* 크레딧 */
@@ -302,26 +313,11 @@ body {
   z-index: 10;
 }
 
-/* 옵션 모달 */
-.options-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 4px;
-}
-.option-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--panel2);
-  border-radius: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-}
-.option-label {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
+/* 효과음 OFF 상태 */
+.btn.sound-off {
+  background: rgba(255,255,255,0.4);
+  color: var(--text-dim);
+  opacity: 0.7;
 }
 
 /* 캔버스 래퍼 */
@@ -527,21 +523,29 @@ body {
 }
 
 @media (max-width: 780px) {
-  body { background-attachment: scroll; }
+  body { background-attachment: scroll; overflow-x: hidden; }
   .page-wrap {
     grid-template-columns: 1fr;
-    padding: 10px 10px 100px;
-    gap: 10px;
+    padding: 8px 0 80px;
+    gap: 8px;
   }
-  .left-panel  { display: none; }
-  .right-panel { display: none; }
-  .mobile-info-bar  { display: flex; }
-  .mobile-controls  { display: flex; }
-  .canvas-wrap { max-width: 100%; }
-  .mobile-evo-wrap  { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
-  .pc-title    { display: none !important; }
-  .pc-controls { display: none !important; }
-  .credit      { display: none !important; }
+  .left-panel   { display: none; }
+  .right-panel  { display: none; }
+  .pc-title     { display: none !important; }
+  .pc-controls  { display: none !important; }
+  .pc-quick-btns { display: none !important; }
+  .credit       { display: none !important; }
+
+  .mobile-info-bar  { display: flex; margin: 0 14px; }
+  .mobile-controls  { display: flex; margin: 0 14px; }
+  .mobile-evo-wrap  { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; margin: 0 0; }
+
+  /* 캔버스: 좌우 여백 확보 (터치 공간) */
+  .canvas-wrap {
+    max-width: calc(100% - 80px); /* 양쪽 40px씩 여백 */
+    margin: 0 auto;
+  }
+
 }
 
 .canvas-wrap.shake-hard {
