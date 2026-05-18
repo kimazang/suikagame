@@ -14,8 +14,8 @@
 // ====================================================
 import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc,
-         collection, query, orderBy, limit, where,
-         getDocs, serverTimestamp, runTransaction }
+         collection, query, orderBy, limit,
+         getDocs, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ====================================================
@@ -126,7 +126,6 @@ let gameOver = false, canDrop = true;
 let currentLv = 1, nextLv = 1;
 let dropX = BOARD_WIDTH / 2;
 let soundEnabled = true; // 효과음 on/off
-let nicknameCheckPending = false; // 닉네임 중복 확인 중복 클릭 방지
 
 let activeBodies    = [];
 let activeBodiesSet = new Set(); // O(1) 존재 확인용
@@ -1117,109 +1116,17 @@ function showNicknameModal() {
 }
 function hideNicknameModal() { document.getElementById('nickname-modal').classList.add('hidden'); }
 
-function normalizeNicknameForKey(name) {
-  return String(name).trim().toLowerCase();
-}
-
-function nicknameDocId(name) {
-  // Firestore 문서 ID에 / 같은 문자가 들어가면 경로로 해석되므로 안전하게 인코딩한다.
-  return encodeURIComponent(normalizeNicknameForKey(name));
-}
-
-async function reserveNickname(input) {
-  if (!firebaseEnabled || !db) {
-    throw new Error('FIREBASE_UNAVAILABLE');
-  }
-
-  const normalized = normalizeNicknameForKey(input);
-  const nickRef = doc(db, 'nicknames', nicknameDocId(input));
-
-  // 과거에 scores 컬렉션에만 저장된 닉네임도 한 번 확인한다.
-  // 새로 시작하는 동시 클릭 경쟁은 아래 transaction이 최종적으로 막는다.
-  const oldScoreQ = query(collection(db, 'scores'), where('nickname', '==', input), limit(10));
-  const oldScoreSnap = await getDocs(oldScoreQ);
-  let usedByOtherInScores = false;
-  oldScoreSnap.forEach(d => {
-    const data = d.data();
-    if (data.playerId && data.playerId !== playerId) {
-      usedByOtherInScores = true;
-    }
-  });
-  if (usedByOtherInScores) {
-    throw new Error('NICKNAME_TAKEN');
-  }
-
-  await runTransaction(db, async (transaction) => {
-    const snap = await transaction.get(nickRef);
-
-    if (snap.exists()) {
-      const data = snap.data();
-      if (data.playerId && data.playerId !== playerId) {
-        throw new Error('NICKNAME_TAKEN');
-      }
-
-      // 같은 기기/같은 playerId가 같은 닉네임을 다시 쓰는 것은 허용한다.
-      transaction.set(nickRef, {
-        nickname: input,
-        normalizedNickname: normalized,
-        playerId,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      return;
-    }
-
-    // 시작하기를 누르는 순간 닉네임을 즉시 선점한다.
-    transaction.set(nickRef, {
-      nickname: input,
-      normalizedNickname: normalized,
-      playerId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
-}
-
-async function confirmNickname() {
-  if (nicknameCheckPending) return;
-
-  const inputEl = document.getElementById('nickname-input');
-  const input = inputEl.value.trim();
+function confirmNickname() {
+  const input = document.getElementById('nickname-input').value.trim();
   const errEl = document.getElementById('nickname-error');
-  const btn = document.getElementById('nickname-confirm-btn');
-
   if (input.length < 2 || input.length > 10) {
     errEl.textContent = '닉네임은 2~10글자여야 해요.';
     return;
   }
-
-  nicknameCheckPending = true;
-  errEl.textContent = '닉네임 확인 중...';
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = '확인 중...';
-  }
-
-  try {
-    await reserveNickname(input);
-
-    nickname = input;
-    lsSet(LS.NICKNAME, nickname);
-    updatePlayerDisplay();
-    hideNicknameModal();
-  } catch (e) {
-    if (e && e.message === 'NICKNAME_TAKEN') {
-      errEl.textContent = '이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.';
-    } else {
-      console.warn('[큐플] 닉네임 중복 확인 실패:', e);
-      errEl.textContent = '닉네임 중복 확인에 실패했어요. 잠시 후 다시 시도해주세요.';
-    }
-  } finally {
-    nicknameCheckPending = false;
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = '시작하기 🚀';
-    }
-  }
+  nickname = input;
+  lsSet(LS.NICKNAME, nickname);
+  updatePlayerDisplay();
+  hideNicknameModal();
 }
 
 // ====================================================
@@ -1337,27 +1244,8 @@ async function init() {
   bind('mob-sound-btn',        'click', toggleSound);
 
   // 닉네임 없으면 모달
-if (!nickname) {
-  showNicknameModal();
-} else {
-  updatePlayerDisplay();
-
-  // 기존 localStorage 닉네임도 nicknames 컬렉션에 선점 등록 시도
-  reserveNickname(nickname).catch(e => {
-    console.warn('[큐플] 기존 닉네임 선점 확인 실패:', e);
-
-    // 다른 사람이 이미 선점한 닉네임이면 기존 닉네임을 비우고 다시 입력받음
-    if (e && e.message === 'NICKNAME_TAKEN') {
-      nickname = '';
-      lsSet(LS.NICKNAME, '');
-      showNicknameModal();
-      const errEl = document.getElementById('nickname-error');
-      if (errEl) {
-        errEl.textContent = '이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.';
-      }
-    }
-  });
-}
+  if (!nickname) { showNicknameModal(); }
+  else { updatePlayerDisplay(); }
 
   // 첫 공은 무조건 1단계
   currentLv = 1;
