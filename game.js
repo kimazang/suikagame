@@ -514,14 +514,12 @@ function renderFrame() {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(body.angle);
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
 
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
     } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
       ctx.fillStyle = FALLBACK_COLORS[level - 1];
       ctx.fill();
       ctx.fillStyle = '#fff';
@@ -543,15 +541,13 @@ function renderFrame() {
     ctx.save();
     ctx.globalAlpha = 1;
     ctx.translate(safeX, DROP_Y);
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
 
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
     } else {
       ctx.fillStyle = FALLBACK_COLORS[lv - 1];
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
       ctx.fill();
     }
 
