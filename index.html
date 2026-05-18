@@ -44,11 +44,11 @@
       <div id="go-player" class="go-player"></div>
       <div class="go-stats-grid">
         <div class="go-stat-item">
-          <div class="go-stat-label">이번 점수</div>
+          <div class="go-stat-label">이번 큐포인트</div>
           <div id="go-score" class="go-stat-val"></div>
         </div>
         <div class="go-stat-item">
-          <div class="go-stat-label">최고 점수</div>
+          <div class="go-stat-label">최고 큐포인트</div>
           <div id="go-best" class="go-stat-val gold"></div>
         </div>
         <div class="go-stat-item">
@@ -82,7 +82,7 @@
       </div>
       <div class="score-card">
         <div class="score-item">
-          <div class="score-label">최고 점수</div>
+          <div class="score-label">최고 큐포인트</div>
           <div id="best-display" class="score-val gold">0</div>
         </div>
         <div class="score-divider"></div>
@@ -92,7 +92,7 @@
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">현재 점수</div>
+          <div class="score-label">현재 큐포인트</div>
           <div id="score-display" class="score-val">0</div>
         </div>
         <div class="score-divider"></div>
@@ -110,7 +110,7 @@
       <!-- 모바일 정보바 -->
       <div class="mobile-info-bar">
         <div class="mob-score-group">
-          <span class="mob-label">점수</span>
+          <span class="mob-label">큐포</span>
           <span id="mob-score" class="mob-val">0</span>
         </div>
         <div class="mob-score-group">
@@ -125,8 +125,10 @@
           <span class="mob-label">다음</span>
           <img id="mob-next-img" class="mob-next-img" alt="" />
         </div>
-        <button id="mob-change-nick-btn" class="btn btn-ghost btn-sm">✏️</button>
-        <button id="mob-sound-btn" class="btn btn-ghost btn-sm">🔊</button>
+        <div class="mob-change-nick-area">
+          <button id="mob-change-nick-btn" class="btn btn-ghost btn-sm">✏️</button>
+          <button id="mob-sound-btn" class="btn btn-ghost btn-sm">🔊</button>
+        </div>
       </div>
 
       <!-- 캔버스 -->
