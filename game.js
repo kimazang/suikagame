@@ -1,7 +1,6 @@
 /**
  * 갈뚱 만들기 — game.js
- * FIX: cloud.png 이미지 사용, 구름 항상 표시, 흰 테두리 제거, 구슬 공백 보정 유지, 슬로우 불꽃놀이 POP 합체 효과
- * - 물리: Matter.js (gravity 2.5, friction 1, restitution 0)
+ * - 물리: Matter.js (gravity 1.0, friction 1, restitution 0, frictionStatic 0.5)
  * - 점수: 레퍼런스 삼각수 기준 [1,3,6,10,15,21,28,36,45,55,66]
  * - 공 크기: 레퍼런스 지름 기준 환산
  * - 드롭: 1~5단계 균등 랜덤, 쿨다운 600ms
@@ -126,6 +125,7 @@ let nickname = '', playerId = '';
 let gameOver = false, canDrop = true;
 let currentLv = 1, nextLv = 1;
 let dropX = BOARD_WIDTH / 2;
+let soundEnabled = true; // 효과음 on/off
 
 let activeBodies    = [];
 let activeBodiesSet = new Set(); // O(1) 존재 확인용
@@ -185,6 +185,7 @@ function playBubblePop(actx, freq, vol, delay = 0) {
 
 // 드롭 효과음: 가볍게 퐁~
 function playDropSound() {
+  if (!soundEnabled) return;
   const actx = getAudio();
   if (!actx) return;
   playBubblePop(actx, 880, 0.18);
@@ -192,6 +193,7 @@ function playDropSound() {
 
 // 합체 효과음: 방울 터지는 퐁! (레벨 높을수록 낮고 통통)
 function playMergeSound(level) {
+  if (!soundEnabled) return;
   const actx = getAudio();
   if (!actx) return;
   try {
@@ -515,12 +517,6 @@ function renderMergeEffects(now) {
   mergeEffects = mergeEffects.filter(eff => {
     const rawT = (now - eff.startTime) / eff.duration;
     if (rawT >= 1) return false;
-
-    const t = Math.max(0, Math.min(1, rawT));
-    // 초반 반응은 빠르게, 후반은 살짝 천천히 흩어지게.
-    const burstT = 1 - Math.pow(1 - t, 2.65);
-    const fade = Math.pow(1 - t, 1.12);
-    const r = eff.radius || BALL_RADII[eff.level - 1];
 
     ctx.save();
     ctx.lineCap = 'round';
@@ -1190,7 +1186,7 @@ function initInput() {
   document.addEventListener('click', e => {
     if (gameOver || !canDrop) return;
     // 버튼, 입력창 등 UI 요소 클릭은 무시
-    if (e.target.closest('button, input, a, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel')) return;
+    if (e.target.closest('button, input, a, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel, .pc-controls, .pc-title, .credit')) return;
     const rect = canvas.getBoundingClientRect();
     if (e.clientX >= rect.left && e.clientX <= rect.right) return;
     dropX = e.clientX < rect.left ? 0 : BOARD_WIDTH;
@@ -1221,15 +1217,20 @@ async function init() {
   // 버튼 바인딩
   bind('nickname-confirm-btn', 'click', confirmNickname);
   bind('nickname-input', 'keydown', e => { if (e.key === 'Enter') confirmNickname(); });
-  bind('change-nickname-btn', 'click', showNicknameModal);
-  bind('mob-change-nick-btn', 'click', showNicknameModal);
-  bind('restart-btn',         'click', restartGame);
-  bind('mob-restart-btn',     'click', restartGame);
+  bind('restart-btn',     'click', restartGame);
+  bind('mob-restart-btn', 'click', restartGame);
   bind('go-restart-btn',  'click', () => { hideGameoverModal(); restartGame(); });
   bind('go-ranking-btn',  'click', () => { hideGameoverModal(); showMobileRanking(); });
   bind('go-nickname-btn', 'click', () => { hideGameoverModal(); showNicknameModal(); });
   bind('mob-ranking-btn',   'click', showMobileRanking);
   bind('mob-ranking-close', 'click', hideMobileRanking);
+  bind('mob-change-nick-btn', 'click', showNicknameModal);
+
+  // 옵션 모달
+  bind('options-btn',     'click', showOptionsModal);
+  bind('opt-close-btn',   'click', hideOptionsModal);
+  bind('opt-nickname-btn','click', () => { hideOptionsModal(); showNicknameModal(); });
+  bind('opt-sound-btn',   'click', toggleSound);
 
   // 닉네임 없으면 모달
   if (!nickname) { showNicknameModal(); }
@@ -1251,5 +1252,17 @@ async function init() {
 function bind(id, ev, fn) { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
 function showMobileRanking() { document.getElementById('mobile-ranking-panel').classList.remove('hidden'); }
 function hideMobileRanking() { document.getElementById('mobile-ranking-panel').classList.add('hidden'); }
+
+function showOptionsModal() { document.getElementById('options-modal').classList.remove('hidden'); }
+function hideOptionsModal()  { document.getElementById('options-modal').classList.add('hidden'); }
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('opt-sound-btn');
+  if (btn) {
+    btn.textContent  = soundEnabled ? 'ON' : 'OFF';
+    btn.className    = soundEnabled ? 'btn btn-orange btn-sm' : 'btn btn-ghost btn-sm';
+  }
+}
 
 init();
