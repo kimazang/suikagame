@@ -14,7 +14,6 @@
   --orange:    #f5811f;
   --orange2:   #d96b0f;
   --gold:      #f5a623;
-  --teal:      #00b4cc;
   --text:      #003366;
   --text-dim:  #5588aa;
   --danger:    #e53935;
@@ -36,7 +35,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo',
                'Noto Sans KR', 'Malgun Gothic', sans-serif;
   background: linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bot) 100%);
-  background-attachment: fixed;
+  background-attachment: fixed; /* 모바일은 미디어쿼리에서 scroll로 override */
   color: var(--text);
   min-height: 100vh;
   overflow-x: hidden;
@@ -298,7 +297,6 @@ body {
 /* ── 오른쪽 패널 ── */
 
 /* 진화의 고리 */
-/* 진화의 고리 */
 .evolution-ring {
   position: relative;
   width: 166px;
@@ -365,9 +363,9 @@ body {
   color: var(--text-dim);
   text-align: center;
 }
-.rank-row:nth-child(1) .rank-num { color: #c8970a; }
-.rank-row:nth-child(2) .rank-num { color: #7a8fa6; }
-.rank-row:nth-child(3) .rank-num { color: #a0643a; }
+.rank-row.rank-1st .rank-num { color: #c8970a; }
+.rank-row.rank-2nd .rank-num { color: #7a8fa6; }
+.rank-row.rank-3rd .rank-num { color: #a0643a; }
 
 .rank-nick  { font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-nick.empty { color: var(--text-dim); }
@@ -426,21 +424,6 @@ body {
   font-size: 16px;
 }
 
-/* ── 반응형 ── */
-@media (max-width: 780px) {
-  .page-wrap {
-    grid-template-columns: 1fr;
-    padding: 10px 10px 100px;
-    gap: 10px;
-  }
-  .left-panel  { display: none; }
-  .right-panel { display: none; }
-  .mobile-info-bar  { display: flex; }
-  .mobile-controls  { display: flex; }
-  .canvas-wrap { max-width: 100%; }
-  .mobile-evo-wrap  { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
-}
-
 /* 모바일 진화의 고리 가로형 */
 .mobile-evo-wrap {
   display: none;
@@ -484,7 +467,23 @@ body {
 }
 .mobile-evolution-row .ring-item.active {
   transform: scale(1.25);
+  border-color: var(--orange);
   box-shadow: 0 0 8px rgba(245,129,31,0.6);
+}
+
+@media (max-width: 780px) {
+  body { background-attachment: scroll; }
+  .page-wrap {
+    grid-template-columns: 1fr;
+    padding: 10px 10px 100px;
+    gap: 10px;
+  }
+  .left-panel  { display: none; }
+  .right-panel { display: none; }
+  .mobile-info-bar  { display: flex; }
+  .mobile-controls  { display: flex; }
+  .canvas-wrap { max-width: 100%; }
+  .mobile-evo-wrap  { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
 }
 
 .canvas-wrap.shake-hard {
