@@ -15,7 +15,7 @@
 import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc,
          collection, query, orderBy, limit,
-         getDocs, serverTimestamp, runTransaction }
+         getDocs, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ====================================================
@@ -1054,63 +1054,7 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function normalizeNickname(name) {
-  return String(name).trim().toLowerCase();
-}
 
-async function reserveNickname(newNickname) {
-  if (!firebaseEnabled || !db) return true;
-
-  const normalized = normalizeNickname(newNickname);
-  const nickRef = doc(db, 'nicknames', normalized);
-
-  const oldNickname = lsGet(LS.NICKNAME, '');
-  const oldNormalized = normalizeNickname(oldNickname);
-  const oldRef = oldNormalized && oldNormalized !== normalized
-    ? doc(db, 'nicknames', oldNormalized)
-    : null;
-
-  try {
-    await runTransaction(db, async (tx) => {
-      // 1) 읽기는 먼저 전부
-      const nickSnap = await tx.get(nickRef);
-      const oldSnap = oldRef ? await tx.get(oldRef) : null;
-
-      // 2) 중복 닉네임 검사
-      if (nickSnap.exists()) {
-        const data = nickSnap.data();
-
-        if (data.playerId !== playerId) {
-          throw new Error('DUPLICATE_NICKNAME');
-        }
-      }
-
-      // 3) 새 닉네임 예약
-      tx.set(nickRef, {
-        playerId,
-        nickname: newNickname,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-
-      // 4) 예전 닉네임 문서 삭제
-      if (
-        oldRef &&
-        oldSnap &&
-        oldSnap.exists() &&
-        oldSnap.data().playerId === playerId
-      ) {
-        tx.delete(oldRef);
-      }
-    });
-
-    return true;
-  } catch (e) {
-    if (e.message === 'DUPLICATE_NICKNAME') return false;
-
-    console.warn('[큐플] 닉네임 예약 실패:', e);
-    return false;
-  }
-}
 
 function buildEvoRing(activeLevel = 0) {
   // 이미 만들어져 있으면 active 클래스만 교체 (DOM 재생성 방지)
@@ -1227,25 +1171,12 @@ function showNicknameModal() {
 }
 function hideNicknameModal() { document.getElementById('nickname-modal').classList.add('hidden'); }
 
-async function confirmNickname() {
+function confirmNickname() {
   const input = document.getElementById('nickname-input').value.trim();
   const errEl = document.getElementById('nickname-error');
-  const btnEl = document.getElementById('nickname-confirm-btn');
 
   if (input.length < 2 || input.length > 10) {
     errEl.textContent = '닉네임은 2~10글자여야 해요.';
-    return;
-  }
-
-  // 중복 클릭 방지
-  if (btnEl) btnEl.disabled = true;
-  errEl.textContent = '닉네임 확인 중...';
-
-  const ok = await reserveNickname(input);
-
-  if (!ok) {
-    errEl.textContent = '이미 사용 중인 닉네임이에요.';
-    if (btnEl) btnEl.disabled = false;
     return;
   }
 
@@ -1253,7 +1184,6 @@ async function confirmNickname() {
   lsSet(LS.NICKNAME, nickname);
   updatePlayerDisplay();
   hideNicknameModal();
-  if (btnEl) btnEl.disabled = false;
 }
 
 // ====================================================
