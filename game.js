@@ -1,13 +1,12 @@
 /**
- * 큐플 합치기 — game.js
- * 수정 내역:
- * 1. UI: 큐플레이 스타일 밝은 테마
- * 2. 진화의 고리: 서클 배치
- * 3. 가이드 세로선 제거
- * 4. 합체 버그 수정 (collisionActive + 근접 감지)
- * 5. 첫 공 항상 1단계
- * 6. 랭킹: 빈 슬롯 10개 표시
- * 7. 효과음 추가 (Web Audio API)
+ * 갈뚱 만들기 — game.js
+ * - 물리: Matter.js (gravity 2.5, friction 1, restitution 0)
+ * - 점수: 레퍼런스 삼각수 기준 [1,3,6,10,15,21,28,36,45,55,66]
+ * - 공 크기: 레퍼런스 지름 기준 환산
+ * - 드롭: 1~5단계 균등 랜덤, 쿨다운 600ms
+ * - 사망: 위험선 위에서 2초 정지
+ * - 랭킹: Firebase Firestore, TOP10 + 내 순위 별도 표시
+ * - 진화의 고리: PC 원형 / 모바일 가로 나열
  */
 
 // ====================================================
@@ -63,8 +62,6 @@ const BALL_RADII = [16, 23, 30, 35, 42, 55, 65, 78, 90, 110, 130];
 // 합체 점수 (새로 생성된 단계 기준, 여기서 수정)
 const MERGE_SCORES = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66];
 
-// 드롭 확률: 1~5단계 균등
-
 // localStorage 키
 const LS = {
   NICKNAME:        'qplay_suika_nickname',
@@ -96,9 +93,9 @@ function initFirebase() {
     db = getFirestore(app);
     firebaseEnabled = true;
   } catch (e) {
-  console.warn('[큐플] Firebase 초기화 실패:', e);
-  showEmptyRanking();
-}
+    console.warn('[큐플] Firebase 초기화 실패:', e);
+    showEmptyRanking();
+  }
 }
 
 // ====================================================
@@ -125,14 +122,15 @@ let gameOver = false, canDrop = true;
 let currentLv = 1, nextLv = 1;
 let dropX = BOARD_WIDTH / 2;
 
-let activeBodies = [];
+let activeBodies    = [];
+let activeBodiesSet = new Set(); // O(1) 존재 확인용
 let mergeQueue   = new Set(); // uid쌍 → 중복 합체 방지
 let dangerTimers = new Map();
 let mergeEffects = [];
 let ballIdCnt    = 0;
 
 // ====================================================
-// [1] 효과음 (Web Audio API)
+// 효과음 (Web Audio API)
 // ====================================================
 let audioCtx = null;
 
@@ -170,7 +168,6 @@ function playMergeSound(level) {
   const ctx = getAudio();
   if (!ctx) return;
   try {
-    // 레벨이 높을수록 더 높고 밝은 소리
     const base = 440 * Math.pow(1.06, level);
     const freqs = [base, base * 1.25, base * 1.5];
     freqs.forEach((freq, i) => {
@@ -230,7 +227,7 @@ function loadImages() {
 // ====================================================
 // Matter.js 설정
 // ====================================================
-const { Engine, Bodies, Body, World, Events, Composite } = Matter;
+const { Engine, Bodies, World, Events, Composite } = Matter;
 let engine, world;
 
 function initPhysics() {
@@ -239,13 +236,13 @@ function initPhysics() {
   engine.gravity.y = 2.5;
 
   const opt = { isStatic: true, friction: 1, restitution: 0, label: 'wall' };
-World.add(world, [
-  Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
-  Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-  Bodies.rectangle(BOARD_WIDTH + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
-]);
+  World.add(world, [
+    Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
+    Bodies.rectangle(-25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
+    Bodies.rectangle(BOARD_WIDTH + 25, BOARD_HEIGHT / 2, 50, BOARD_HEIGHT * 2, opt),
+  ]);
 
-  // [4] 합체 버그 수정: collisionStart + collisionActive 둘 다 사용
+  // collisionStart + collisionActive 둘 다 사용 (합체 누락 방지)
   Events.on(engine, 'collisionStart',  onCollision);
   Events.on(engine, 'collisionActive', onCollision);
 }
@@ -253,6 +250,7 @@ World.add(world, [
 function clearAllBalls() {
   activeBodies.forEach(b => World.remove(world, b));
   activeBodies = [];
+  activeBodiesSet.clear();
   mergeQueue.clear();
   dangerTimers.clear();
 }
@@ -277,14 +275,15 @@ function createBall(x, y, level) {
 
   ballIdCnt++;
   body.gameData = {
-  level,
-  uid:       ballIdCnt,
-  isMerging: false,
-  spawnTime: Date.now(),
-};
+    level,
+    uid:       ballIdCnt,
+    isMerging: false,
+    spawnTime: Date.now(),
+  };
 
   World.add(world, body);
   activeBodies.push(body);
+  activeBodiesSet.add(body);
   return body;
 }
 
@@ -300,7 +299,7 @@ function dropBall() {
   const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
 
   createBall(safeX, DROP_Y, lv);
-  playDropSound(); // [7] 드롭 효과음
+  playDropSound();
 
   currentLv = nextLv;
   nextLv    = randomDropLevel();
@@ -310,7 +309,7 @@ function dropBall() {
 }
 
 // ====================================================
-// [4] 합체 감지 (collisionStart + collisionActive)
+// 합체 감지 (collisionStart + collisionActive)
 // ====================================================
 function onCollision(event) {
   if (gameOver) return;
@@ -341,7 +340,7 @@ function processMergePair(a, b) {
 }
 
 // ====================================================
-// [4-보조] 게임루프에서 근접 공 검사 (floor 위 밀착 케이스 대응)
+// 근접 공 검사 보조 (바닥 밀착 합체 누락 방지)
 // ====================================================
 let proximityCheckFrame = 0;
 
@@ -370,10 +369,10 @@ function checkProximityMerges() {
       const dist = Math.sqrt(dx * dx + dy * dy);
       const minD = BALL_RADII[lvA - 1] + BALL_RADII[lvB - 1];
 
-      // 닿거나 약간 겹치면 합체 (tolerance 3px)
+      // 닿거나 약간 겹치면 합체 (tolerance 4px)
       if (dist <= minD + 4) {
-  processMergePair(a, b);
-}
+        processMergePair(a, b);
+      }
     }
   }
 }
@@ -382,12 +381,14 @@ function checkProximityMerges() {
 // 공 합체
 // ====================================================
 function mergeBalls(a, b, level) {
-  if (!activeBodies.includes(a) || !activeBodies.includes(b)) return;
+  if (!activeBodiesSet.has(a) || !activeBodiesSet.has(b)) return;
 
   const mx = (a.position.x + b.position.x) / 2;
   const my = (a.position.y + b.position.y) / 2;
 
   activeBodies = activeBodies.filter(bd => bd !== a && bd !== b);
+  activeBodiesSet.delete(a);
+  activeBodiesSet.delete(b);
   dangerTimers.delete(a.gameData.uid);
   dangerTimers.delete(b.gameData.uid);
   World.remove(world, a);
@@ -404,7 +405,7 @@ function mergeBalls(a, b, level) {
     if (watermelonCount > bestWatermelonCount) bestWatermelonCount = watermelonCount;
   }
 
-  playMergeSound(newLevel); // [7] 합체 효과음
+  playMergeSound(newLevel);
   addMergeEffect(mx, my, newLevel, isWatermelon);
   createBall(mx, my, newLevel);
   updateScoreUI();
@@ -450,7 +451,7 @@ function toGameX(clientX) {
 }
 
 function renderFrame() {
-  // [1] 배경: 밝은 하늘색
+  // 배경
   ctx.fillStyle = '#d6eeff';
   ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
 
@@ -508,7 +509,6 @@ function renderFrame() {
     const img    = imgs[level - 1];
     const { x, y } = body.position;
 
-
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(body.angle);
@@ -531,33 +531,30 @@ function renderFrame() {
     ctx.restore();
   });
 
-  // [3] 세로 가이드 라인 제거 → 미리보기 공만 표시 (세로선 없음)
-  // [3] 떨어지기 전 대기 공 표시
-if (canDrop && !gameOver) {
-  const lv     = currentLv;
-  const radius = BALL_RADII[lv - 1];
-  const img    = imgs[lv - 1];
-  const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
+  // 대기 공 표시
+  if (canDrop && !gameOver) {
+    const lv     = currentLv;
+    const radius = BALL_RADII[lv - 1];
+    const img    = imgs[lv - 1];
+    const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
 
-  ctx.save();
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.translate(safeX, DROP_Y);
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
 
-  // ★ 절대 흐리지 않게: 완전 불투명
-  ctx.globalAlpha = 1;
-  ctx.translate(safeX, DROP_Y);
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.clip();
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+    } else {
+      ctx.fillStyle = FALLBACK_COLORS[lv - 1];
+      ctx.fill();
+    }
 
-  if (img && img.complete && img.naturalWidth > 0) {
-    ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
-  } else {
-    ctx.fillStyle = FALLBACK_COLORS[lv - 1];
-    ctx.fill();
+    ctx.restore();
   }
-
-  ctx.restore();
-}
 
   if (gameOver) {
     ctx.fillStyle = 'rgba(200,230,255,0.4)';
@@ -615,12 +612,12 @@ async function endGame() {
     }, 1500);
   }
 
-const prevBest = lsGetInt(LS.BEST_SCORE, 0);
+  const prevBest   = lsGetInt(LS.BEST_SCORE, 0);
   const prevBestWm = lsGetInt(LS.BEST_WATERMELON, 0);
   let scoreUpdated = false;
-  let wmUpdated = false;
+  let wmUpdated    = false;
 
- if (score > prevBest) {
+  if (score > prevBest) {
     lsSet(LS.BEST_SCORE, score);
     bestScore = score;
     scoreUpdated = true;
@@ -650,11 +647,11 @@ function restartGame() {
   gameOver = false; canDrop = true;
   score = 0; watermelonCount = 0;
   ballIdCnt = 0;
+  proximityCheckFrame = 0;
   mergeEffects = [];
   clearAllBalls();
   hideGameoverModal();
 
-  // [5] 재시작 후 첫 공은 항상 1단계
   currentLv = 1;
   nextLv    = randomDropLevel();
   dropX     = BOARD_WIDTH / 2;
@@ -662,6 +659,9 @@ function restartGame() {
   updateScoreUI();
   updateNextPreview();
   buildEvoRing(currentLv);
+
+  // 게임루프 재시작
+  requestAnimationFrame(gameLoop);
 }
 
 // ====================================================
@@ -671,10 +671,13 @@ function gameLoop() {
   if (!gameOver) {
     Engine.update(engine, 1000 / 60);
     checkGameOver();
-    checkProximityMerges(); // [4] 근접 합체 보조 감지
+    checkProximityMerges();
   }
   renderFrame();
-  requestAnimationFrame(gameLoop);
+
+  if (!gameOver) {
+    requestAnimationFrame(gameLoop);
+  }
 }
 
 // ====================================================
@@ -684,11 +687,11 @@ async function saveToFirebase() {
   if (!firebaseEnabled || !db) return;
 
   try {
-    const docRef  = doc(db, 'scores', playerId);
+    const docRef   = doc(db, 'scores', playerId);
     const snapshot = await getDoc(docRef);
 
     // 기존 데이터와 비교해서 더 높은 값만 저장 (덮어씌움 방지)
-    const prev = snapshot.exists() ? snapshot.data() : {};
+    const prev     = snapshot.exists() ? snapshot.data() : {};
     const newScore = Math.max(score, prev.score || 0);
     const newWm    = Math.max(watermelonCount, prev.watermelonCount || 0);
 
@@ -698,12 +701,14 @@ async function saveToFirebase() {
     await setDoc(docRef, {
       playerId,
       nickname,
-      score:          newScore,
+      score:           newScore,
       watermelonCount: newWm,
-      updatedAt:      serverTimestamp(),
-    }, { merge: true }); // merge: true → 다른 필드 유지
+      updatedAt:       serverTimestamp(),
+    }, { merge: true });
 
-    await loadRanking();
+    // 저장 후 내 최신 데이터를 바로 넘겨서 getDoc 중복 호출 방지
+    const myLatest = { playerId, nickname, score: newScore, watermelonCount: newWm };
+    await loadRanking(myLatest);
 
   } catch (e) {
     console.warn('[큐플] Firebase 저장 실패:', e);
@@ -713,10 +718,9 @@ async function saveToFirebase() {
 // ====================================================
 // Firebase 랭킹
 // ====================================================
-async function loadRanking() {
+async function loadRanking(myLatestData = null) {
   if (!firebaseEnabled || !db) { showEmptyRanking(); return; }
   try {
-    // TOP 10 쿼리
     const q    = query(collection(db, 'scores'), orderBy('score', 'desc'), limit(10));
     const snap = await getDocs(q);
     if (snap.empty) { showEmptyRanking(); return; }
@@ -730,12 +734,18 @@ async function loadRanking() {
     // TOP 10 밖이면 내 순위 별도 계산
     let myRankData = null;
     if (!inTop10 && playerId) {
-      // 내 점수보다 높은 사람 수 = 내 순위 - 1
-      const myDocRef = doc(db, 'scores', playerId);
-      const mySnap   = await getDoc(myDocRef);
-      if (mySnap.exists()) {
-        const myData  = mySnap.data();
-        const aboveQ  = query(collection(db, 'scores'), orderBy('score', 'desc'));
+      // saveToFirebase에서 이미 읽은 데이터가 있으면 재활용 (getDoc 중복 방지)
+      const myData = myLatestData || await (async () => {
+        const mySnap = await getDoc(doc(db, 'scores', playerId));
+        return mySnap.exists() ? mySnap.data() : null;
+      })();
+
+      if (myData) {
+        const aboveQ  = query(
+          collection(db, 'scores'),
+          orderBy('score', 'desc'),
+          limit(500)
+        );
         const allSnap = await getDocs(aboveQ);
         let rank = 1;
         allSnap.forEach(d => {
@@ -753,7 +763,7 @@ async function loadRanking() {
   }
 }
 
-// [6] 빈 랭킹 슬롯 10개 표시
+// 빈 랭킹 슬롯 표시
 function showEmptyRanking() {
   const rows = Array.from({ length: 10 }, (_, i) => `
     <div class="rank-row">
@@ -770,9 +780,10 @@ function showEmptyRanking() {
 function renderRanking(data, myRankData = null) {
   const rows = Array.from({ length: 10 }, (_, i) => {
     const item = data[i];
+    const medalClass = i === 0 ? 'rank-1st' : i === 1 ? 'rank-2nd' : i === 2 ? 'rank-3rd' : '';
     if (item) {
       return `
-        <div class="rank-row ${item.playerId === playerId ? 'my-rank' : ''}">
+        <div class="rank-row ${medalClass} ${item.playerId === playerId ? 'my-rank' : ''}">
           <span class="rank-num">${i + 1}</span>
           <span class="rank-nick">${escHtml(item.nickname)}</span>
           <span class="rank-score">${(item.score||0).toLocaleString()}P</span>
@@ -780,7 +791,7 @@ function renderRanking(data, myRankData = null) {
         </div>`;
     } else {
       return `
-        <div class="rank-row">
+        <div class="rank-row ${medalClass}">
           <span class="rank-num">${i + 1}</span>
           <span class="rank-nick empty">-</span>
           <span class="rank-score">-</span>
@@ -809,39 +820,52 @@ function escHtml(s) {
 }
 
 function buildEvoRing(activeLevel = 0) {
+  // 이미 만들어져 있으면 active 클래스만 교체 (DOM 재생성 방지)
   const ring = document.getElementById('evolution-ring');
   if (ring) {
-    ring.innerHTML = '';
-    const cx = 83, cy = 83, r = 65;
-    BALL_IMAGES.forEach((url, i) => {
-      const level = i + 1;
-      const angle = -90 + i * (360 / 11);
-      const rad   = angle * Math.PI / 180;
-      const div = document.createElement('div');
-      div.className = 'ring-item' + (level === activeLevel ? ' active' : '');
-      div.style.left = (cx + Math.cos(rad) * r) + 'px';
-      div.style.top  = (cy + Math.sin(rad) * r) + 'px';
-      const img = document.createElement('img');
-      img.src = url;
-      img.alt = level + '단계';
-      div.appendChild(img);
-      ring.appendChild(div);
+    if (ring.children.length === 0) {
+      // 최초 1회 생성
+      const cx = 83, cy = 83, r = 65;
+      BALL_IMAGES.forEach((url, i) => {
+        const level = i + 1;
+        const angle = -90 + i * (360 / 11);
+        const rad   = angle * Math.PI / 180;
+        const div = document.createElement('div');
+        div.className = 'ring-item';
+        div.dataset.level = level;
+        div.style.left = (cx + Math.cos(rad) * r) + 'px';
+        div.style.top  = (cy + Math.sin(rad) * r) + 'px';
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = level + '단계';
+        div.appendChild(img);
+        ring.appendChild(div);
+      });
+    }
+    // active 클래스만 업데이트
+    Array.from(ring.children).forEach(div => {
+      div.classList.toggle('active', Number(div.dataset.level) === activeLevel);
     });
   }
 
   // 모바일 가로형 진화의 고리
   const mobileRow = document.getElementById('mobile-evolution-row');
   if (mobileRow) {
-    mobileRow.innerHTML = '';
-    BALL_IMAGES.forEach((url, i) => {
-      const level = i + 1;
-      const div = document.createElement('div');
-      div.className = 'ring-item' + (level === activeLevel ? ' active' : '');
-      const img = document.createElement('img');
-      img.src = url;
-      img.alt = level + '단계';
-      div.appendChild(img);
-      mobileRow.appendChild(div);
+    if (mobileRow.children.length === 0) {
+      BALL_IMAGES.forEach((url, i) => {
+        const level = i + 1;
+        const div = document.createElement('div');
+        div.className = 'ring-item';
+        div.dataset.level = level;
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = level + '단계';
+        div.appendChild(img);
+        mobileRow.appendChild(div);
+      });
+    }
+    Array.from(mobileRow.children).forEach(div => {
+      div.classList.toggle('active', Number(div.dataset.level) === activeLevel);
     });
   }
 }
@@ -945,8 +969,8 @@ function initInput() {
   }, { passive: false });
 
   canvas.addEventListener('touchmove', e => {
-    if (!gameOver) e.preventDefault();
     if (gameOver) return;
+    e.preventDefault();
     const rawX = toGameX(e.touches[0].clientX);
     dropX = Math.max(0, Math.min(BOARD_WIDTH, rawX));
   }, { passive: false });
@@ -962,7 +986,6 @@ function initInput() {
     if (gameOver) return;
     const touch = e.touches[0];
     const rect  = canvas.getBoundingClientRect();
-    // 캔버스 내부는 canvas 이벤트가 처리
     if (touch.clientX >= rect.left && touch.clientX <= rect.right) return;
     dropX = touch.clientX < rect.left ? 0 : BOARD_WIDTH;
   }, { passive: true });
@@ -983,6 +1006,24 @@ function initInput() {
     dropX = touch.clientX < rect.left ? 0 : BOARD_WIDTH;
     dropBall();
   }, { passive: true });
+
+  // ── PC 마우스: 캔버스 바깥 영역도 받기 ──
+  document.addEventListener('mousemove', e => {
+    if (gameOver) return;
+    const rect = canvas.getBoundingClientRect();
+    if (e.clientX >= rect.left && e.clientX <= rect.right) return;
+    dropX = e.clientX < rect.left ? 0 : BOARD_WIDTH;
+  });
+
+  document.addEventListener('click', e => {
+    if (gameOver || !canDrop) return;
+    // 버튼, 입력창 등 UI 요소 클릭은 무시
+    if (e.target.closest('button, input, a, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel')) return;
+    const rect = canvas.getBoundingClientRect();
+    if (e.clientX >= rect.left && e.clientX <= rect.right) return;
+    dropX = e.clientX < rect.left ? 0 : BOARD_WIDTH;
+    dropBall();
+  });
 }
 
 // ====================================================
@@ -1022,7 +1063,7 @@ async function init() {
   if (!nickname) { showNicknameModal(); }
   else { updatePlayerDisplay(); }
 
-  // [5] 첫 공은 무조건 1단계
+  // 첫 공은 무조건 1단계
   currentLv = 1;
   nextLv    = randomDropLevel();
 
