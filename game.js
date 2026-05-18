@@ -42,22 +42,22 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika1.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika2.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika3.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika4.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika5.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika6.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika7.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika8.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika9.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika10.png?v=1991-5',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika11.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika1.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika2.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika3.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika4.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika5.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika6.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika7.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika8.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika9.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika10.png?v=1991-9',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika11.png?v=1991-9',
 ];
 
 // 구름 이미지 URL — GitHub suikagame 폴더의 cloud.png를 사용
 // github.com/.../blob/... 주소보다 raw.githubusercontent.com 주소가 이미지 로딩에 안정적이다.
-const CLOUD_IMAGE_URL = 'https://raw.githubusercontent.com/kimazang/suikagame/main/cloud.png?v=1991-5';
+const CLOUD_IMAGE_URL = 'https://raw.githubusercontent.com/kimazang/suikagame/main/cloud.png?v=1991-9';
 
 // 단계별 반지름 (레퍼런스 기준 지름/2)
 // 1:32 2:46 3:60 4:70 5:85 6:110 7:130 8:155 9:180(추정) 10:220 11:260
@@ -646,6 +646,16 @@ function renderFrame() {
   // 합체 POP 효과는 공을 그린 뒤에 한 번 더 그려서 약해 보이지 않게 처리한다.
   const now = Date.now();
 
+  // 구름은 모든 공보다 먼저 그린다.
+  // 그래야 공을 떨어뜨린 직후 생성된 물리 공이 구름 뒤로 숨어 보이지 않는다.
+  if (!gameOver) {
+    const lvForCloud = currentLv;
+    const radiusForCloud = BALL_RADII[lvForCloud - 1];
+    const safeXForCloud = Math.max(radiusForCloud + 1, Math.min(BOARD_WIDTH - radiusForCloud - 1, dropX));
+    const cloudX = Math.max(46, Math.min(BOARD_WIDTH - 46, safeXForCloud));
+    drawCloudHolder(cloudX);
+  }
+
   // 공 렌더링
   Composite.allBodies(world).forEach(body => {
     if (body.label !== 'ball' || !body.gameData) return;
@@ -699,8 +709,8 @@ function renderFrame() {
     const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
     const cloudX = Math.max(46, Math.min(BOARD_WIDTH - 46, safeX));
 
-    // 구름은 항상 표시
-    drawCloudHolder(cloudX);
+    // 구름은 위에서 이미 먼저 그렸으므로,
+    // 여기서는 대기공만 그린다. 공은 항상 구름보다 앞에 보여야 한다.
 
     // 대기공은 canDrop일 때만 표시 (쿨다운 중엔 숨김)
     if (canDrop) {
