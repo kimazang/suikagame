@@ -827,6 +827,7 @@ async function endGame() {
 // ====================================================
 function restartGame() {
   gameOver = false; canDrop = true;
+  lastFrameTime = performance.now();
   score = 0; watermelonCount = 0;
   ballIdCnt = 0;
   proximityCheckFrame = 0;
@@ -849,12 +850,21 @@ function restartGame() {
 // ====================================================
 // 메인 게임 루프
 // ====================================================
-function gameLoop() {
+// 모바일에서 프레임이 떨어져도 실제 시간 기준으로 비슷한 속도로 떨어지게 한다.
+// 기존처럼 Engine.update(engine, 1000 / 60) 고정값을 쓰면,
+// 30fps 기기에서는 물리 업데이트도 절반만 진행되어 공이 느리게 떨어져 보일 수 있다.
+let lastFrameTime = performance.now();
+
+function gameLoop(now = performance.now()) {
+  const delta = Math.min(now - lastFrameTime, 1000 / 30);
+  lastFrameTime = now;
+
   if (!gameOver) {
-    Engine.update(engine, 1000 / 60);
+    Engine.update(engine, delta);
     checkGameOver();
     checkProximityMerges();
   }
+
   renderFrame();
 
   if (!gameOver) {
@@ -1258,6 +1268,7 @@ async function init() {
   showEmptyRanking();
   loadRanking();
 
+  lastFrameTime = performance.now();
   requestAnimationFrame(gameLoop);
 }
 
