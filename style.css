@@ -270,20 +270,16 @@ body {
   position: relative;
   width: 100%;
   max-width: 544px;
-  /* box.png(579x652) 비율 유지 */
-  aspect-ratio: 579 / 652;
-  background-image: url('https://raw.githubusercontent.com/kimazang/suikagame/main/box.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  /* 안쪽 빈 공간: top=2.5%, left=9%, right=9.2%, bottom=10.4% */
-  padding: 2.5% 9.2% 10.4% 9%;
-  box-sizing: border-box;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px var(--border), var(--shadow-lg);
+  background: #d6eeff;
   line-height: 0;
 }
 #game-canvas {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
 }
 
 /* 모바일 컨트롤 (PC 숨김) */
