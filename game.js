@@ -76,6 +76,10 @@ const FALLBACK_COLORS = [
   '#9b59b6','#f97316','#22c55e','#0ea5e9','#8b5cf6','#dc2626'
 ];
 
+// 이미지 가장자리 투명 여백 때문에 구슬 사이가 떠 보이는 것을 보정한다.
+// 물리 충돌 크기는 그대로 두고, 화면에 그릴 때만 아주 살짝 크게 보여준다.
+const BALL_DRAW_SCALE = 1.045;
+
 // ====================================================
 // Firebase 초기화
 // ====================================================
@@ -229,16 +233,12 @@ function createBallSprite(img, level) {
   octx.imageSmoothingEnabled = true;
   octx.imageSmoothingQuality = 'high';
 
-  // 원형으로 부드럽게 클리핑
-  octx.save();
-  octx.beginPath();
-  octx.arc(s / 2, s / 2, s / 2 - 2 * scale, 0, Math.PI * 2);
-  octx.clip();
-
-  // 이미지 끝부분이 딱 잘리면서 뾰족해 보이는 걸 막기 위해 아주 살짝 안쪽으로 넣음
-  const pad = Math.max(1, Math.round(size * 0.025)) * scale;
-  octx.drawImage(img, pad, pad, s - pad * 2, s - pad * 2);
-  octx.restore();
+  // IMPORTANT:
+  // 원본 구슬 이미지에 이미 테두리/원형 디자인이 들어가 있으므로,
+  // 코드에서 흰색 테두리나 안쪽 패딩을 추가하지 않는다.
+  // 예전처럼 pad/clip/stroke를 넣으면 실제 물리 반지름보다 이미지가 작아 보여
+  // 구슬끼리 닿아도 사이에 빈틈이 생긴다.
+  octx.drawImage(img, 0, 0, s, s);
 
   return off;
 }
@@ -483,6 +483,58 @@ function resizeCanvas() {
   canvas.style.height = (BOARD_HEIGHT * dw / BOARD_WIDTH) + 'px';
 }
 
+function drawCloudHolder(x, y, scale = 0.68) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  // 은은한 그림자
+  ctx.fillStyle = 'rgba(91, 53, 28, 0.10)';
+  ctx.beginPath();
+  ctx.ellipse(0, 31, 54, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 구름 본체 — 기존 UI를 건드리지 않는 장식용
+  ctx.fillStyle = '#fff1a8';
+  ctx.strokeStyle = '#f2cf58';
+  ctx.lineWidth = 4;
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.arc(-32, 5, 19, 0, Math.PI * 2);
+  ctx.arc(-13, -12, 24, 0, Math.PI * 2);
+  ctx.arc(14, -12, 25, 0, Math.PI * 2);
+  ctx.arc(34, 5, 20, 0, Math.PI * 2);
+  ctx.arc(5, 13, 28, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 얼굴
+  ctx.fillStyle = '#5b5144';
+  ctx.beginPath();
+  ctx.arc(-10, 1, 2.1, 0, Math.PI * 2);
+  ctx.arc(12, 1, 2.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#5b5144';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(1, 8, 6, 0, Math.PI);
+  ctx.stroke();
+
+  // 작은 손 느낌
+  ctx.strokeStyle = '#79c765';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(6, 21);
+  ctx.quadraticCurveTo(15, 29, 24, 22);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function toGameX(clientX) {
   const rect   = canvas.getBoundingClientRect();
   const scaleX = BOARD_WIDTH / rect.width;
@@ -563,7 +615,8 @@ function renderFrame() {
       );
 
     if (canDrawImage) {
-      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+      const drawRadius = radius * BALL_DRAW_SCALE;
+      ctx.drawImage(img, -drawRadius, -drawRadius, drawRadius * 2, drawRadius * 2);
     } else {
       ctx.beginPath();
       ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -585,6 +638,12 @@ function renderFrame() {
     const img    = ballSprites[lv - 1] || imgs[lv - 1];
     const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
 
+    // 현재 떨어질 공 뒤쪽에 구름만 추가한다. 게임 로직/기존 UI는 건드리지 않는다.
+    // 공에 완전히 가려지지 않도록 공 반지름에 맞춰 구름을 조금 위로 올린다.
+    const cloudX = Math.max(52, Math.min(BOARD_WIDTH - 52, safeX));
+    const cloudY = Math.max(34, DROP_Y - radius - 24);
+    drawCloudHolder(cloudX, cloudY, 0.68);
+
     ctx.save();
     ctx.globalAlpha = 1;
     ctx.translate(safeX, DROP_Y);
@@ -597,7 +656,8 @@ function renderFrame() {
       );
 
     if (canDrawImage) {
-      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+      const drawRadius = radius * BALL_DRAW_SCALE;
+      ctx.drawImage(img, -drawRadius, -drawRadius, drawRadius * 2, drawRadius * 2);
     } else {
       ctx.fillStyle = FALLBACK_COLORS[lv - 1];
       ctx.beginPath();
