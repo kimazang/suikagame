@@ -42,22 +42,22 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika1.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika2.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika3.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika4.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika5.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika6.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika7.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika8.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika9.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika10.png',
-  'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika11.png',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika1.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika2.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika3.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika4.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika5.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika6.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika7.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika8.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika9.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika10.png?v=1991-5',
+  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika11.png?v=1991-5',
 ];
 
 // 구름 이미지 URL — GitHub suikagame 폴더의 cloud.png를 사용
 // github.com/.../blob/... 주소보다 raw.githubusercontent.com 주소가 이미지 로딩에 안정적이다.
-const CLOUD_IMAGE_URL = 'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/cloud.png';
+const CLOUD_IMAGE_URL = 'https://raw.githubusercontent.com/kimazang/suikagame/main/cloud.png?v=1991-5';
 
 // 단계별 반지름 (레퍼런스 기준 지름/2)
 // 1:32 2:46 3:60 4:70 5:85 6:110 7:130 8:155 9:180(추정) 10:220 11:260
@@ -598,18 +598,19 @@ function resizeCanvas() {
   canvas.style.height = (BOARD_HEIGHT * dw / BOARD_WIDTH) + 'px';
 }
 
-function drawCloudHolder(x, ballRadius) {
+function drawCloudHolder(x) {
   // 사용자가 직접 만든 cloud.png만 사용한다.
-  // 코드로 그린 구름 fallback은 일부러 넣지 않는다. 이상한 임시 구름이 보이면 더 거슬리기 때문.
+  // 구름 높이는 공 크기와 상관없이 항상 고정한다.
   if (!cloudImg || !cloudImg.complete || !cloudImg.naturalWidth) return;
 
   const cloudW = 92;
   const cloudH = cloudW * (cloudImg.naturalHeight / cloudImg.naturalWidth);
 
-  // 구름은 현재 떨어질 공의 바로 위에서 항상 대기한다.
-  // 공이 커져도 천장에 붙지 않게 최소 y값만 잡고, 공 윗부분과 살짝 겹치게 둔다.
-  const cloudBottom = DROP_Y - ballRadius + 14;
-  const cloudY = Math.max(6, cloudBottom - cloudH);
+  // 치명적 오류 수정:
+  // 기존에는 현재 공 반지름(ballRadius)에 따라 cloudY를 계산해서
+  // 공을 떨어뜨릴 때마다 구름 높이가 위아래로 바뀌었다.
+  // 이제 구름은 항상 같은 높이에 고정된다.
+  const cloudY = 14;
 
   ctx.save();
   ctx.drawImage(cloudImg, x - cloudW / 2, cloudY, cloudW, cloudH);
@@ -699,7 +700,7 @@ function renderFrame() {
     const cloudX = Math.max(46, Math.min(BOARD_WIDTH - 46, safeX));
 
     // 구름은 항상 표시
-    drawCloudHolder(cloudX, radius);
+    drawCloudHolder(cloudX);
 
     // 대기공은 canDrop일 때만 표시 (쿨다운 중엔 숨김)
     if (canDrop) {
@@ -1264,11 +1265,15 @@ function updateSoundButtons() {
   const pcBtn  = document.getElementById('sound-toggle-btn');
   const mobBtn = document.getElementById('mob-sound-btn');
 
-  [pcBtn, mobBtn].forEach(btn => {
-    if (!btn) return;
-    btn.textContent = isOn ? '🔊 ON' : '🔇 OFF';
-    btn.className   = isOn ? 'sound-toggle on' : 'sound-toggle off';
-  });
+  if (pcBtn) {
+    pcBtn.textContent = isOn ? '🔊 ON' : '🔇 OFF';
+    pcBtn.className   = isOn ? 'sound-toggle on' : 'sound-toggle off';
+  }
+
+  if (mobBtn) {
+    mobBtn.textContent = isOn ? '🔊 ON' : '🔇 OFF';
+    mobBtn.className   = isOn ? 'sound-toggle on' : 'sound-toggle off';
+  }
 }
 
 init();
