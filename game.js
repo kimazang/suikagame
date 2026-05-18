@@ -925,26 +925,25 @@ function initInput() {
     if (gameOver) return;
     const touch = e.touches[0];
     const rect  = canvas.getBoundingClientRect();
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-        touch.clientY >= rect.top  && touch.clientY <= rect.bottom) return;
-    dropX = Math.max(0, Math.min(BOARD_WIDTH, toGameX(touch.clientX)));
+    // 캔버스 내부는 canvas 이벤트가 처리
+    if (touch.clientX >= rect.left && touch.clientX <= rect.right) return;
+    dropX = touch.clientX < rect.left ? 0 : BOARD_WIDTH;
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
     if (gameOver) return;
     const touch = e.touches[0];
     const rect  = canvas.getBoundingClientRect();
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-        touch.clientY >= rect.top  && touch.clientY <= rect.bottom) return;
-    dropX = Math.max(0, Math.min(BOARD_WIDTH, toGameX(touch.clientX)));
+    if (touch.clientX >= rect.left && touch.clientX <= rect.right) return;
+    dropX = touch.clientX < rect.left ? 0 : BOARD_WIDTH;
   }, { passive: true });
 
   document.addEventListener('touchend', e => {
     if (gameOver || !canDrop) return;
     const touch = e.changedTouches[0];
     const rect  = canvas.getBoundingClientRect();
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-        touch.clientY >= rect.top  && touch.clientY <= rect.bottom) return;
+    if (touch.clientX >= rect.left && touch.clientX <= rect.right) return;
+    dropX = touch.clientX < rect.left ? 0 : BOARD_WIDTH;
     dropBall();
   }, { passive: true });
 }
