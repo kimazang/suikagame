@@ -15,7 +15,7 @@
 import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc,
          collection, query, orderBy, limit,
-         getDocs, serverTimestamp }
+         getDocs, serverTimestamp, runTransaction }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ====================================================
@@ -832,7 +832,6 @@ async function endGame() {
 // ====================================================
 function restartGame() {
   gameOver = false; canDrop = true;
-  lastFrameTime = performance.now();
   score = 0; watermelonCount = 0;
   ballIdCnt = 0;
   proximityCheckFrame = 0;
@@ -1015,6 +1014,65 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function normalizeNickname(name) {
+  return String(name).trim().toLowerCase();
+}
+
+async function reserveNickname(newNickname) {
+  if (!firebaseEnabled || !db) return true;
+
+  const normalized = normalizeNickname(newNickname);
+  const nickRef = doc(db, 'nicknames', normalized);
+
+  const oldNickname = lsGet(LS.NICKNAME, '');
+  const oldNormalized = normalizeNickname(oldNickname);
+  const oldRef = oldNormalized && oldNormalized !== normalized
+    ? doc(db, 'nicknames', oldNormalized)
+    : null;
+
+  try {
+    await runTransaction(db, async (tx) => {
+      // 1) 읽기는 먼저 전부
+      const nickSnap = await tx.get(nickRef);
+      const oldSnap = oldRef ? await tx.get(oldRef) : null;
+
+      // 2) 중복 닉네임 검사
+      if (nickSnap.exists()) {
+        const data = nickSnap.data();
+
+        if (data.playerId !== playerId) {
+          throw new Error('DUPLICATE_NICKNAME');
+        }
+      }
+
+      // 3) 새 닉네임 예약
+      tx.set(nickRef, {
+        playerId,
+        nickname: newNickname,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      // 4) 예전 닉네임 문서 삭제
+      if (
+        oldRef &&
+        oldSnap &&
+        oldSnap.exists() &&
+        oldSnap.data().playerId === playerId
+      ) {
+        tx.delete(oldRef);
+      }
+    });
+
+    return true;
+  } catch (e) {
+    if (e.message === 'DUPLICATE_NICKNAME') return false;
+
+    console.warn('[큐플] 닉네임 예약 실패:', e);
+    return false;
+  }
+}
+
+
 function buildEvoRing(activeLevel = 0) {
   // 이미 만들어져 있으면 active 클래스만 교체 (DOM 재생성 방지)
   const ring = document.getElementById('evolution-ring');
@@ -1130,17 +1188,33 @@ function showNicknameModal() {
 }
 function hideNicknameModal() { document.getElementById('nickname-modal').classList.add('hidden'); }
 
-function confirmNickname() {
+async function confirmNickname() {
   const input = document.getElementById('nickname-input').value.trim();
   const errEl = document.getElementById('nickname-error');
+  const btnEl = document.getElementById('nickname-confirm-btn');
+
   if (input.length < 2 || input.length > 10) {
     errEl.textContent = '닉네임은 2~10글자여야 해요.';
     return;
   }
+
+  // 중복 클릭 방지
+  if (btnEl) btnEl.disabled = true;
+  errEl.textContent = '닉네임 확인 중...';
+
+  const ok = await reserveNickname(input);
+
+  if (!ok) {
+    errEl.textContent = '이미 사용 중인 닉네임이에요.';
+    if (btnEl) btnEl.disabled = false;
+    return;
+  }
+
   nickname = input;
   lsSet(LS.NICKNAME, nickname);
   updatePlayerDisplay();
   hideNicknameModal();
+  if (btnEl) btnEl.disabled = false;
 }
 
 // ====================================================
@@ -1214,7 +1288,7 @@ function initInput() {
   document.addEventListener('click', e => {
     if (gameOver || !canDrop) return;
     // 버튼, 입력창 등 UI 요소 클릭은 무시
-    if (e.target.closest('button, input, a, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel, .pc-controls, .pc-title, .credit')) return;
+    if (e.target.closest('button, input, a, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel, .pc-controls, .pc-quick-btns, .pc-title, .credit')) return;
     const rect = canvas.getBoundingClientRect();
     if (e.clientX >= rect.left && e.clientX <= rect.right) return;
     dropX = e.clientX < rect.left ? 0 : BOARD_WIDTH;
