@@ -653,12 +653,12 @@ function renderFrame() {
 
   // 구름은 모든 공보다 먼저 그린다.
   // 그래야 공을 떨어뜨린 직후 생성된 물리 공이 구름 뒤로 숨어 보이지 않는다.
+  let sharedCloudX = BOARD_WIDTH / 2;
   if (!gameOver) {
-    const lvForCloud = currentLv;
-    const radiusForCloud = BALL_RADII[lvForCloud - 1];
-    const safeXForCloud = Math.max(radiusForCloud + 1, Math.min(BOARD_WIDTH - radiusForCloud - 1, dropX));
-    const cloudX = Math.max(46, Math.min(BOARD_WIDTH - 46, safeXForCloud));
-    drawCloudHolder(cloudX);
+    const radiusForCloud = BALL_RADII[currentLv - 1];
+    const safeXForCloud  = Math.max(radiusForCloud + 1, Math.min(BOARD_WIDTH - radiusForCloud - 1, dropX));
+    sharedCloudX = Math.max(46, Math.min(BOARD_WIDTH - 46, safeXForCloud));
+    drawCloudHolder(sharedCloudX);
   }
 
   // 공 렌더링
@@ -712,10 +712,6 @@ function renderFrame() {
     const radius = BALL_RADII[lv - 1];
     const img    = ballSprites[lv - 1] || imgs[lv - 1];
     const safeX  = Math.max(radius + 1, Math.min(BOARD_WIDTH - radius - 1, dropX));
-    const cloudX = Math.max(46, Math.min(BOARD_WIDTH - 46, safeX));
-
-    // 구름은 위에서 이미 먼저 그렸으므로,
-    // 여기서는 대기공만 그린다. 공은 항상 구름보다 앞에 보여야 한다.
 
     // 대기공은 canDrop일 때만 표시 (쿨다운 중엔 숨김)
     if (canDrop) {
@@ -1071,7 +1067,6 @@ async function reserveNickname(newNickname) {
     return false;
   }
 }
-
 
 function buildEvoRing(activeLevel = 0) {
   // 이미 만들어져 있으면 active 클래스만 교체 (DOM 재생성 방지)
