@@ -59,7 +59,7 @@ const BALL_IMAGES = [
 
 // 구름 이미지 URL — GitHub suikagame 폴더의 cloud.png를 사용
 // github.com/.../blob/... 주소보다 raw.githubusercontent.com 주소가 이미지 로딩에 안정적이다.
-const CLOUD_IMAGE_URL = 'https://raw.githubusercontent.com/kimazang/suikagame/main/cloud.png';
+const CLOUD_IMAGE_URL = 'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/cloud.png';
 
 // 단계별 반지름 (레퍼런스 기준 지름/2)
 // 1:32 2:46 3:60 4:70 5:85 6:110 7:130 8:155 9:180(추정) 10:220 11:260
@@ -81,10 +81,6 @@ const FALLBACK_COLORS = [
   '#5bc0eb','#2299dd','#44bb99','#f5a623','#e85d4a',
   '#9b59b6','#f97316','#22c55e','#0ea5e9','#8b5cf6','#dc2626'
 ];
-
-// 이미지 가장자리 투명 여백 때문에 구슬 사이가 떠 보이는 것을 보정한다.
-// 물리 충돌 크기는 그대로 두고, 화면에 그릴 때만 아주 살짝 크게 보여준다.
-const BALL_DRAW_SCALE = 1.0;
 
 // ====================================================
 // Firebase 초기화
@@ -484,32 +480,27 @@ function mergeBalls(a, b, level) {
 // 시각 효과
 // ====================================================
 function addMergeEffect(x, y, level, isWatermelon) {
-  // 사과게임처럼 은은한 불꽃놀이가 슬로우모드로 퍼지는 POP 효과.
-  // 핵심: 한 번 번쩍이 아니라, 안쪽에서 바깥쪽으로 여러 알갱이가 순차적으로 팡~ 퍼진다.
+  // 사과게임처럼 은은한 불꽃놀이가 팝! 하고 퍼지는 효과.
+  // 수정 포인트: 반응은 즉각적으로, 알갱이는 과하지 않게 약 5개만 사용한다.
   const radius = BALL_RADII[level - 1];
   const particles = [];
-  const particleCount = isWatermelon ? 58 : 38;
+  const particleCount = isWatermelon ? 7 : 5;
 
   for (let i = 0; i < particleCount; i++) {
     const baseAngle = Math.PI * 2 * (i / particleCount);
-    const angle = baseAngle + (Math.random() * 0.7 - 0.35);
-    const shell = i % 3; // 0: 안쪽, 1: 중간, 2: 바깥
-    const distance = radius * (
-      shell === 0 ? (0.72 + Math.random() * 0.34) :
-      shell === 1 ? (1.02 + Math.random() * 0.42) :
-                   (1.32 + Math.random() * 0.56)
-    );
+    const angle = baseAngle + (Math.random() * 0.56 - 0.28);
+    const distance = radius * (1.02 + Math.random() * 0.42);
 
     particles.push({
       angle,
       distance,
-      size: (isWatermelon ? 2.4 : 1.9) + Math.random() * (isWatermelon ? 3.8 : 3.0),
-      delay: Math.random() * 220 + shell * 35,
-      drift: (Math.random() * 2 - 1) * radius * 0.10,
-      fall: Math.random() * radius * 0.16,
+      size: (isWatermelon ? 3.0 : 2.4) + Math.random() * (isWatermelon ? 2.4 : 1.8),
+      delay: Math.random() * 38, // 거의 즉각적으로 터지게
+      drift: (Math.random() * 2 - 1) * radius * 0.07,
+      fall: Math.random() * radius * 0.10,
       colorType: Math.random(),
-      twinkle: Math.random() > 0.38,
-      cross: Math.random() > 0.62,
+      twinkle: Math.random() > 0.46,
+      cross: Math.random() > 0.68,
     });
   }
 
@@ -518,7 +509,7 @@ function addMergeEffect(x, y, level, isWatermelon) {
     radius,
     particles,
     startTime: Date.now(),
-    duration:  isWatermelon ? 1450 : 1180,
+    duration:  isWatermelon ? 1050 : 880,
   });
 }
 
@@ -528,9 +519,9 @@ function renderMergeEffects(now) {
     if (rawT >= 1) return false;
 
     const t = Math.max(0, Math.min(1, rawT));
-    // 슬로우모드 느낌: 초반은 탁 터지고, 후반은 천천히 흩어지게.
-    const burstT = 1 - Math.pow(1 - t, 2.15);
-    const fade = Math.pow(1 - t, 1.15);
+    // 초반 반응은 빠르게, 후반은 살짝 천천히 흩어지게.
+    const burstT = 1 - Math.pow(1 - t, 2.65);
+    const fade = Math.pow(1 - t, 1.12);
     const r = eff.radius || BALL_RADII[eff.level - 1];
 
     ctx.save();
@@ -540,9 +531,8 @@ function renderMergeEffects(now) {
 
     // 안쪽에서 바깥으로 여러 겹이 파앙~ 퍼지는 링.
     const rings = [
-      { delay: 0.00, size: 0.52, alpha: 0.72, width: 0.045, color: 'rgba(255,255,255,0.95)' },
-      { delay: 0.09, size: 0.86, alpha: 0.58, width: 0.038, color: 'rgba(255,238,142,0.90)' },
-      { delay: 0.18, size: 1.18, alpha: 0.42, width: 0.030, color: 'rgba(255,255,255,0.82)' },
+      { delay: 0.00, size: 0.70, alpha: 0.82, width: 0.050, color: 'rgba(255,255,255,0.95)' },
+      { delay: 0.035, size: 1.02, alpha: 0.48, width: 0.034, color: 'rgba(255,238,142,0.86)' },
     ];
 
     rings.forEach(ring => {
@@ -566,7 +556,7 @@ function renderMergeEffects(now) {
       const localRaw = (now - eff.startTime - pt.delay) / Math.max(1, eff.duration - pt.delay);
       if (localRaw <= 0 || localRaw >= 1) return;
 
-      const localT = 1 - Math.pow(1 - localRaw, 2.35);
+      const localT = 1 - Math.pow(1 - localRaw, 2.85);
       const slowFade = Math.pow(1 - localRaw, 1.05);
       const travel = pt.distance * localT;
       const px = eff.x + Math.cos(pt.angle) * travel + pt.drift * localT;
@@ -708,8 +698,7 @@ function renderFrame() {
       );
 
     if (canDrawImage) {
-      const drawRadius = radius * BALL_DRAW_SCALE;
-      ctx.drawImage(img, -drawRadius, -drawRadius, drawRadius * 2, drawRadius * 2);
+      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
     } else {
       ctx.beginPath();
       ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -756,8 +745,7 @@ function renderFrame() {
       );
 
     if (canDrawImage) {
-      const drawRadius = radius * BALL_DRAW_SCALE;
-      ctx.drawImage(img, -drawRadius, -drawRadius, drawRadius * 2, drawRadius * 2);
+      ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
     } else {
       ctx.fillStyle = FALLBACK_COLORS[lv - 1];
       ctx.beginPath();
@@ -1095,7 +1083,7 @@ function updateScoreUI() {
   setText('best-wm-display', bwm + '개');
   setText('mob-score',       score.toLocaleString());
   setText('mob-best',        bs.toLocaleString());
-  setText('mob-wm',          watermelonCount);
+  setText('mob-wm',          watermelonCount + '개');
   setText('mob-rank-best',   bs.toLocaleString());
 }
 
