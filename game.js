@@ -1,5 +1,5 @@
 /**
- * 갈뚱 만들기 — game.js
+ * 1991 만들기 — game.js
  * - 물리: Matter.js (gravity 1.0, friction 1, restitution 0, frictionStatic 0.5)
  * - 점수: 레퍼런스 삼각수 기준 [1,3,6,10,15,21,28,36,45,55,66]
  * - 공 크기: 레퍼런스 지름 기준 환산
