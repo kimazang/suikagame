@@ -56,7 +56,6 @@ const BALL_IMAGES = [
   'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/suika11.png',
 ];
 
-
 // 구름 이미지 URL — GitHub suikagame 폴더의 cloud.png를 사용
 // github.com/.../blob/... 주소보다 raw.githubusercontent.com 주소가 이미지 로딩에 안정적이다.
 const CLOUD_IMAGE_URL = 'https://cdn.jsdelivr.net/gh/kimazang/suikagame@main/cloud.png';
@@ -150,75 +149,64 @@ function getAudio() {
   } catch (e) { return null; }
 }
 
-// 드롭 효과음: 귀여운 뽕~
-function playDropSound() {
-  const ctx = getAudio();
-  if (!ctx) return;
+// 비눗방울 터지는 소리 생성기
+// 화이트 노이즈를 밴드패스 필터로 걸러서 "퐁" 소리를 만든다
+function playBubblePop(actx, freq, volume, delay = 0) {
   try {
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(900, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.11);
+    const t = actx.currentTime + delay;
+    const dur = 0.07;
+
+    // 화이트 노이즈 버퍼
+    const bufSize = actx.sampleRate * dur;
+    const buffer  = actx.createBuffer(1, bufSize, actx.sampleRate);
+    const data    = buffer.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const noise = actx.createBufferSource();
+    noise.buffer = buffer;
+
+    // 밴드패스 필터: 특정 주파수만 통과시켜 "퐁" 느낌
+    const filter = actx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(freq, t);
+    filter.frequency.exponentialRampToValueAtTime(freq * 0.4, t + dur);
+    filter.Q.value = 12; // Q 높을수록 더 또렷한 퐁
+
+    // 짧고 빠르게 꺼지는 게인
+    const gain = actx.createGain();
+    gain.gain.setValueAtTime(volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(actx.destination);
+
+    noise.start(t);
+    noise.stop(t + dur + 0.01);
   } catch (e) {}
 }
 
-// 합체 효과음: 러블리 뽕뽕! (레벨 높을수록 조금 더 낮고 풍성하게)
+// 드롭 효과음: 가볍게 퐁~
+function playDropSound() {
+  const actx = getAudio();
+  if (!actx) return;
+  playBubblePop(actx, 1800, 0.4);
+}
+
+// 합체 효과음: 비눗방울 터지는 퐁! (레벨 높을수록 낮고 묵직하게)
 function playMergeSound(level) {
-  const ctx = getAudio();
-  if (!ctx) return;
+  const actx = getAudio();
+  if (!actx) return;
   try {
-    // 1단계=1200Hz 귀엽고 높음, 11단계=700Hz 조금 더 낮고 통통
-    const baseFreq = 1200 - level * 45;
+    // 1단계: 높고 가볍게(2200Hz) → 11단계: 낮고 통통하게(800Hz)
+    const freq   = 2200 - level * 130;
+    const volume = 0.55 + level * 0.02;
+    playBubblePop(actx, freq, volume);
 
-    // 뽕! 메인 사운드
-    const osc1  = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(baseFreq, ctx.currentTime);
-    osc1.frequency.exponentialRampToValueAtTime(baseFreq * 0.6, ctx.currentTime + 0.1);
-    gain1.gain.setValueAtTime(0.28, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-    osc1.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.16);
-
-    // 하모닉 — 더 통통하고 귀여운 느낌
-    const osc2  = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(baseFreq * 1.5, ctx.currentTime);
-    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 0.9, ctx.currentTime + 0.08);
-    gain2.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    osc2.start(ctx.currentTime);
-    osc2.stop(ctx.currentTime + 0.11);
-
-    // 갈뚱(11단계) — 뽕뽕뽕뽕 귀엽게 연속
+    // 갈뚱(11단계) — 퐁퐁퐁퐁 연속으로 터지는 느낌
     if (level === 11) {
-      const melody = [1200, 1400, 1100, 1600];
-      melody.forEach((freq, i) => {
-        const delay = i * 0.11;
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.connect(g);
-        g.connect(ctx.destination);
-        o.type = 'sine';
-        o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-        o.frequency.exponentialRampToValueAtTime(freq * 0.6, ctx.currentTime + delay + 0.09);
-        g.gain.setValueAtTime(0.25, ctx.currentTime + delay);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.13);
-        o.start(ctx.currentTime + delay);
-        o.stop(ctx.currentTime + delay + 0.14);
+      [800, 1100, 900, 1300].forEach((f, i) => {
+        playBubblePop(actx, f, 0.5, (i + 1) * 0.09);
       });
     }
   } catch (e) {}
@@ -652,8 +640,6 @@ function drawCloudHolder(x, ballRadius) {
   const cloudY = Math.max(6, cloudBottom - cloudH);
 
   ctx.save();
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(cloudImg, x - cloudW / 2, cloudY, cloudW, cloudH);
   ctx.restore();
 }
@@ -665,9 +651,6 @@ function toGameX(clientX) {
 }
 
 function renderFrame() {
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
   // 배경
   ctx.fillStyle = '#d6eeff';
   ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
