@@ -1257,14 +1257,15 @@ function toggleSound() {
 }
 
 function updateSoundButtons() {
-  const label = soundEnabled ? '🔊 효과음 ON' : '🔇 효과음 OFF';
-  const mobLabel = soundEnabled ? '🔊' : '🔇';
-  const cls = soundEnabled ? 'btn btn-ghost btn-sm' : 'btn btn-ghost btn-sm sound-off';
-
+  const isOn   = soundEnabled;
   const pcBtn  = document.getElementById('sound-toggle-btn');
   const mobBtn = document.getElementById('mob-sound-btn');
-  if (pcBtn)  { pcBtn.textContent = label; pcBtn.className = cls; }
-  if (mobBtn) { mobBtn.textContent = mobLabel; mobBtn.className = cls; }
+
+  [pcBtn, mobBtn].forEach(btn => {
+    if (!btn) return;
+    btn.textContent = isOn ? '🔊 ON' : '🔇 OFF';
+    btn.className   = isOn ? 'sound-toggle on' : 'sound-toggle off';
+  });
 }
 
 init();
