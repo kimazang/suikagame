@@ -889,10 +889,11 @@ function restartGame() {
   updateNextPreview();
   buildEvoRing(currentLv);
 
-  // 게임루프 재시작
+  // 게임루프 재시작 (이전 루프가 살아있으면 먼저 취소)
+  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
   lastFrameTime = performance.now();
   physicsAccumulator = 0;
-  requestAnimationFrame(gameLoop);
+  animFrameId = requestAnimationFrame(gameLoop);
 }
 
 // ====================================================
@@ -900,6 +901,7 @@ function restartGame() {
 // ====================================================
 let lastFrameTime = performance.now();
 let physicsAccumulator = 0;
+let animFrameId = null; // 중복 루프 방지용
 
 // Matter.js 옵션에 의존하지 않고, 실제 각속도를 직접 감쇠한다.
 // 고정 타임스텝 안에서 호출하므로 PC/모바일 모두 같은 기준으로 회전이 줄어든다.
@@ -938,7 +940,7 @@ function gameLoop(now = performance.now()) {
   renderFrame();
 
   if (!gameOver) {
-    requestAnimationFrame(gameLoop);
+    animFrameId = requestAnimationFrame(gameLoop);
   }
 }
 
@@ -1453,7 +1455,6 @@ async function init() {
   // UI 보강: 기존 HTML/CSS는 최대한 유지하고, 누락된 버튼만 JS로 채운다.
   // 게임 엔진/물리에는 영향 없음.
   ensureMobileOptionsPanel();
-  ensureGameoverActionButtons();
 
   // 버튼 바인딩
   bind('nickname-confirm-btn', 'click', confirmNickname);
@@ -1494,9 +1495,8 @@ async function init() {
   showEmptyRanking();
   loadRanking();
 
-  requestAnimationFrame(gameLoop);
+  animFrameId = requestAnimationFrame(gameLoop);
 }
-
 
 // ====================================================
 // UI 보강 — 누락된 버튼 자동 생성
@@ -1577,43 +1577,7 @@ function ensureMobileOptionsPanel() {
   }
 }
 
-// 게임오버 점수 모달 안에 '다시하기' 버튼이 없으면 자동으로 추가한다.
-// 이미 HTML에 있으면 그대로 재사용한다.
-function ensureGameoverActionButtons() {
-  const modal = document.getElementById('gameover-modal');
-  if (!modal) return;
-
-  let actions =
-    modal.querySelector('.gameover-actions') ||
-    modal.querySelector('.go-actions') ||
-    modal.querySelector('.modal-actions');
-
-  if (!actions) {
-    actions = document.createElement('div');
-    actions.className = 'gameover-actions';
-
-    const msg = document.getElementById('go-message');
-    if (msg && msg.parentElement) {
-      msg.insertAdjacentElement('afterend', actions);
-    } else {
-      modal.appendChild(actions);
-    }
-  }
-
-  let restartBtn = document.getElementById('go-restart-btn');
-  if (!restartBtn) {
-    restartBtn = document.createElement('button');
-    restartBtn.id = 'go-restart-btn';
-    restartBtn.type = 'button';
-    restartBtn.className = 'go-restart-btn';
-  }
-
-  restartBtn.textContent = '다시하기';
-
-  if (restartBtn.parentElement !== actions) {
-    actions.insertBefore(restartBtn, actions.firstChild);
-  }
-}
+// go-restart-btn은 HTML에 이미 존재하므로 별도 생성 불필요
 
 function bind(id, ev, fn) { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
 function showMobileRanking() {
