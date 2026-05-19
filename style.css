@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
 /* =====================================================
    큐플 합치기 — style.css
    테마: 큐플레이 스타일 (밝은 파란색)
@@ -1501,24 +1503,30 @@ body {
 }
 
 /* =====================================================
-   PC 전용 타이틀 / 크레딧 위치 보정 v4
+   PC 전용 타이틀 / 크레딧 위치 보정 FINAL
    - 모바일 UI 영향 없음
    - 1991 만들기 타이틀을 최상단 중앙에 배치
    - 상단 여백을 넉넉하게 확보
-   - @kimazang을 게임판 오른쪽 아래에 배치
+   - @kimazang을 게임판 오른쪽 바깥 아래에 배치
 ===================================================== */
 @media (min-width: 781px) {
   body {
     overflow-x: hidden;
   }
 
+  /* 기존 .game-title이 남아도 왼쪽 위에 뜨지 않게 숨김 */
+  .game-title:not(.pc-title) {
+    display: none !important;
+  }
+
   .pc-title,
   .game-title.pc-title {
     display: block !important;
+    position: static !important;
     width: 100% !important;
     max-width: 1160px !important;
     margin: 0 auto !important;
-    padding: 44px 14px 20px !important;
+    padding: 48px 14px 22px !important;
     text-align: center !important;
     font-family: 'Jua', -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif !important;
     font-size: 42px !important;
@@ -1536,20 +1544,19 @@ body {
   }
 
   .center-panel {
-    position: relative;
-  }
-
-  .canvas-wrap {
     position: relative !important;
   }
 
   .credit,
   .kimazang-credit {
     position: absolute !important;
-    right: 12px !important;
+
+    /* BOARD_WIDTH 544px 기준: 중앙에서 272px + 10px 오른쪽 */
+    left: calc(50% + 272px + 10px) !important;
+    right: auto !important;
     bottom: 10px !important;
-    left: auto !important;
     top: auto !important;
+
     z-index: 20 !important;
     display: block !important;
     font-size: 12px !important;
@@ -1561,6 +1568,7 @@ body {
     pointer-events: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    white-space: nowrap !important;
   }
 }
 
@@ -1571,4 +1579,3 @@ body {
     display: none !important;
   }
 }
-
