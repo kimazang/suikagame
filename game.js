@@ -482,9 +482,6 @@ function explodeBalls(a, b) {
   score += MERGE_SCORES[10];
   if (score > bestScore) bestScore = score;
 
-  watermelonCount++;
-  if (watermelonCount > bestWatermelonCount) bestWatermelonCount = watermelonCount;
-
   playMergeSound(11);
   addMergeEffect(mx, my, 11, true);
   updateScoreUI();
