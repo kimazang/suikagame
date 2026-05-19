@@ -3,28 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-
-  <title>1991 만들기 🫦</title>
+  <title>1991 만들기 👄</title>
   <meta name="description" content="큐플레이 캐릭터를 합쳐 1991을 만들어 보세요!" />
-
-  <!-- 파비콘 -->
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/kimazang/suikagame/main/1991_favicon.png" />
-  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/kimazang/suikagame/main/1991_favicon.png" />
-
-  <!-- 카카오톡 / 디스코드 / 링크 미리보기 -->
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/kimazang/suikagame/main/favicon.png" />
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/kimazang/suikagame/main/favicon.png" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="1991 만들기 🫦" />
+  <meta property="og:title" content="1991 만들기 👄" />
   <meta property="og:description" content="큐플레이 캐릭터를 합쳐 1991을 만들어 보세요!" />
   <meta property="og:image" content="https://raw.githubusercontent.com/kimazang/suikagame/main/preview.png" />
   <meta property="og:url" content="https://kimazang.github.io/suikagame/" />
-
-  <!-- 트위터 / X 미리보기 -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="1991 만들기 🫦" />
+  <meta name="twitter:title" content="1991 만들기 👄" />
   <meta name="twitter:description" content="큐플레이 캐릭터를 합쳐 1991을 만들어 보세요!" />
   <meta name="twitter:image" content="https://raw.githubusercontent.com/kimazang/suikagame/main/preview.png" />
-
-  <!-- 폰트 / CSS -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet" />
@@ -35,7 +26,7 @@
   <!-- 닉네임 모달 -->
   <div id="nickname-modal" class="overlay">
     <div class="modal-box">
-      <div class="modal-emoji">🫦</div>
+      <div class="modal-emoji">👄</div>
       <h2 class="modal-title">1991 만들기</h2>
       <p class="modal-desc">닉네임을 설정하면 랭킹에 기록돼요.<br>2~10글자로 입력해주세요.</p>
       <input type="text" id="nickname-input" class="nickname-input"
@@ -53,15 +44,15 @@
       <div id="go-player" class="go-player"></div>
       <div class="go-stats-grid">
         <div class="go-stat-item">
-          <div class="go-stat-label">현재 점수</div>
+          <div class="go-stat-label">이번 큐포인트</div>
           <div id="go-score" class="go-stat-val"></div>
         </div>
         <div class="go-stat-item">
-          <div class="go-stat-label">최고 점수</div>
+          <div class="go-stat-label">최고 큐포인트</div>
           <div id="go-best" class="go-stat-val gold"></div>
         </div>
         <div class="go-stat-item">
-          <div class="go-stat-label">이번 판 1991</div>
+          <div class="go-stat-label">이번 판 1991 기록</div>
           <div id="go-wm" class="go-stat-val"></div>
         </div>
         <div class="go-stat-item">
@@ -78,8 +69,20 @@
     </div>
   </div>
 
+  <!-- 모바일 옵션 바텀시트 -->
+  <div id="mob-options-panel" class="mob-options-panel hidden">
+    <div class="mob-options-header">
+      <span>⚙️ 옵션</span>
+      <button id="mob-options-close" class="btn btn-ghost btn-sm">✕</button>
+    </div>
+    <div class="mob-options-body">
+      <button id="mob-restart-btn" class="btn btn-orange btn-full">🔄 다시 시작</button>
+      <button id="mob-change-nick-btn" class="btn btn-ghost btn-full">✏️ 닉네임 변경</button>
+    </div>
+  </div>
+
   <!-- PC 타이틀 -->
-  <div class="pc-title">🫦 1991 만들기</div>
+  <div class="pc-title">👄 1991 만들기</div>
 
   <!-- 페이지 레이아웃 -->
   <div class="page-wrap">
@@ -91,22 +94,22 @@
       </div>
       <div class="score-card">
         <div class="score-item">
-          <div class="score-label">최고 점수</div>
+          <div class="score-label">최고 큐포인트</div>
           <div id="best-display" class="score-val gold">0</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">1991 최고 기록 🫦</div>
+          <div class="score-label">1991 최고 기록 👄</div>
           <div id="best-wm-display" class="score-val gold">0개</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">현재 점수</div>
+          <div class="score-label">현재 큐포인트</div>
           <div id="score-display" class="score-val">0</div>
         </div>
         <div class="score-divider"></div>
         <div class="score-item">
-          <div class="score-label">이번 판 1991 🫦</div>
+          <div class="score-label">이번 판 1991 👄</div>
           <div id="wm-display" class="score-val">0개</div>
         </div>
       </div>
@@ -119,7 +122,7 @@
       <!-- 모바일 정보바 -->
       <div class="mobile-info-bar">
         <div class="mob-score-group">
-          <span class="mob-label">점수</span>
+          <span class="mob-label">큐포</span>
           <span id="mob-score" class="mob-val">0</span>
         </div>
         <div class="mob-score-group">
@@ -127,16 +130,17 @@
           <span id="mob-best" class="mob-val gold">0</span>
         </div>
         <div class="mob-score-group">
-          <span class="mob-label">1991🫦</span>
+          <span class="mob-label">1991👄</span>
           <span id="mob-wm" class="mob-val">0</span>
         </div>
-        <div class="mob-next-group">
-          <span class="mob-label">다음</span>
-          <img id="mob-next-img" class="mob-next-img" alt="" />
-        </div>
-        <div class="mob-change-nick-area">
-          <button id="mob-change-nick-btn" class="btn btn-ghost btn-sm">✏️</button>
+        <!-- 오른쪽: 다음구슬 / 소리 / 옵션 -->
+        <div class="mob-right-group">
+          <div class="mob-next-group">
+            <span class="mob-label">다음</span>
+            <img id="mob-next-img" class="mob-next-img" alt="" />
+          </div>
           <button id="mob-sound-btn" class="sound-toggle on">🔊 ON</button>
+          <button id="mob-options-btn" class="btn btn-ghost btn-sm">⚙️</button>
         </div>
       </div>
 
@@ -145,16 +149,8 @@
         <canvas id="game-canvas"></canvas>
       </div>
 
-      <!-- PC 하단 버튼 -->
-      <div class="pc-controls">
-        <button id="restart-btn" class="btn btn-orange btn-sm">🔄 처음부터</button>
-        <button id="sound-toggle-btn" class="sound-toggle on">🔊 ON</button>
-        <button id="change-nickname-btn" class="btn btn-ghost btn-sm">✏️ 닉네임 변경</button>
-      </div>
-
       <!-- 모바일 하단 버튼 -->
       <div class="mobile-controls">
-        <button id="mob-restart-btn" class="btn btn-orange">🔄 다시 시작</button>
         <button id="mob-ranking-btn" class="btn btn-blue">
           🏆 랭킹 · <span id="mob-rank-best">0</span>P
         </button>
@@ -177,6 +173,12 @@
       </div>
       <div class="panel-logo">1991 제작법</div>
       <div id="evolution-ring" class="evolution-ring"></div>
+      <!-- PC 옵션 버튼들 -->
+      <div class="pc-panel-btns">
+        <button id="restart-btn" class="btn btn-orange btn-sm btn-full">🔄 처음부터</button>
+        <button id="sound-toggle-btn" class="sound-toggle on">🔊 ON</button>
+        <button id="change-nickname-btn" class="btn btn-ghost btn-sm btn-full">✏️ 닉네임 변경</button>
+      </div>
     </aside>
   </div>
 
