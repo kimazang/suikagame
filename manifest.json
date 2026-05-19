@@ -1,0 +1,23 @@
+{
+  "name": "1991 만들기",
+  "short_name": "1991",
+  "description": "큐플레이 캐릭터를 합쳐 1991을 만들어 보세요!",
+  "start_url": "/suikagame/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#5ab8e0",
+  "theme_color": "#5ab8e0",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/kimazang/suikagame/main/1991_favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/kimazang/suikagame/main/1991_favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
