@@ -1499,3 +1499,76 @@ body {
     height: 32px !important;
   }
 }
+
+/* =====================================================
+   PC 전용 타이틀 / 크레딧 위치 보정 v4
+   - 모바일 UI 영향 없음
+   - 1991 만들기 타이틀을 최상단 중앙에 배치
+   - 상단 여백을 넉넉하게 확보
+   - @kimazang을 게임판 오른쪽 아래에 배치
+===================================================== */
+@media (min-width: 781px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .pc-title,
+  .game-title.pc-title {
+    display: block !important;
+    width: 100% !important;
+    max-width: 1160px !important;
+    margin: 0 auto !important;
+    padding: 44px 14px 20px !important;
+    text-align: center !important;
+    font-family: 'Jua', -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif !important;
+    font-size: 42px !important;
+    font-weight: 400 !important;
+    line-height: 1.08 !important;
+    letter-spacing: 1px !important;
+    color: #ffffff !important;
+    text-shadow:
+      0 4px 14px rgba(0, 80, 160, 0.28),
+      0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  }
+
+  .page-wrap {
+    padding-top: 0 !important;
+  }
+
+  .center-panel {
+    position: relative;
+  }
+
+  .canvas-wrap {
+    position: relative !important;
+  }
+
+  .credit,
+  .kimazang-credit {
+    position: absolute !important;
+    right: 12px !important;
+    bottom: 10px !important;
+    left: auto !important;
+    top: auto !important;
+    z-index: 20 !important;
+    display: block !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.2px !important;
+    color: rgba(0, 51, 102, 0.45) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+    pointer-events: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 780px) {
+  .pc-title,
+  .credit,
+  .kimazang-credit {
+    display: none !important;
+  }
+}
+
