@@ -1481,7 +1481,7 @@ async function init() {
 
   // 닉네임 없으면 모달
   if (!nickname) { showNicknameModal(); }
-  else { updatePlayerDisplay(); }
+  else { hideNicknameModal(); updatePlayerDisplay(); }
 
   // 첫 공은 무조건 1단계
   currentLv = 1;
@@ -1514,42 +1514,40 @@ function ensureMobileOptionsPanel() {
     document.body.appendChild(panel);
   }
 
-  let card =
-    panel.querySelector('.mob-options-card') ||
-    panel.querySelector('.mob-options-box') ||
-    panel.querySelector('.panel') ||
-    panel.firstElementChild;
-
-  if (!card || card === panel) {
-    card = document.createElement('div');
-    card.className = 'mob-options-card';
-    panel.appendChild(card);
+  // 헤더는 제목과 X 버튼만 담당한다.
+  let header = panel.querySelector('.mob-options-header');
+  if (!header) {
+    header = document.createElement('div');
+    header.className = 'mob-options-header';
+    panel.insertBefore(header, panel.firstChild);
   }
+
+  let title = header.querySelector('span');
+  if (!title) {
+    title = document.createElement('span');
+    header.insertBefore(title, header.firstChild);
+  }
+  title.textContent = '⚙️ 옵션';
 
   let closeBtn = document.getElementById('mob-options-close');
   if (!closeBtn) {
     closeBtn = document.createElement('button');
     closeBtn.id = 'mob-options-close';
     closeBtn.type = 'button';
-    closeBtn.className = 'mob-options-close';
-    closeBtn.textContent = '×';
+    closeBtn.textContent = '✕';
     closeBtn.setAttribute('aria-label', '닫기');
   }
-  if (closeBtn.parentElement !== card) {
-    card.insertBefore(closeBtn, card.firstChild);
+  closeBtn.className = 'btn btn-ghost btn-sm';
+  if (closeBtn.parentElement !== header) {
+    header.appendChild(closeBtn);
   }
 
-  let nickBtn = document.getElementById('mob-change-nick-btn');
-  if (!nickBtn) {
-    nickBtn = document.createElement('button');
-    nickBtn.id = 'mob-change-nick-btn';
-    nickBtn.type = 'button';
-    nickBtn.className = 'mob-options-item';
-  }
-  nickBtn.textContent = '닉네임 변경하기';
-  nickBtn.removeAttribute('aria-hidden');
-  if (nickBtn.parentElement !== card) {
-    card.appendChild(nickBtn);
+  // 버튼들은 반드시 body 영역에 둔다. 헤더로 이동시키면 옵션창 UI가 깨진다.
+  let body = panel.querySelector('.mob-options-body');
+  if (!body) {
+    body = document.createElement('div');
+    body.className = 'mob-options-body';
+    panel.appendChild(body);
   }
 
   let restartBtn = document.getElementById('mob-restart-btn');
@@ -1557,12 +1555,25 @@ function ensureMobileOptionsPanel() {
     restartBtn = document.createElement('button');
     restartBtn.id = 'mob-restart-btn';
     restartBtn.type = 'button';
-    restartBtn.className = 'mob-options-item';
   }
-  restartBtn.textContent = '처음부터';
+  restartBtn.className = 'btn btn-orange btn-full';
+  restartBtn.textContent = '🔄 처음부터';
   restartBtn.removeAttribute('aria-hidden');
-  if (restartBtn.parentElement !== card) {
-    card.appendChild(restartBtn);
+  if (restartBtn.parentElement !== body) {
+    body.appendChild(restartBtn);
+  }
+
+  let nickBtn = document.getElementById('mob-change-nick-btn');
+  if (!nickBtn) {
+    nickBtn = document.createElement('button');
+    nickBtn.id = 'mob-change-nick-btn';
+    nickBtn.type = 'button';
+  }
+  nickBtn.className = 'btn btn-ghost btn-full';
+  nickBtn.textContent = '✏️ 닉네임 변경';
+  nickBtn.removeAttribute('aria-hidden');
+  if (nickBtn.parentElement !== body) {
+    body.appendChild(nickBtn);
   }
 }
 
