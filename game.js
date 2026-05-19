@@ -298,11 +298,8 @@ function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
   engine.gravity.y = 2.5; // PHYSICS_SPEED=1.0 기준 낙하속도 보정
-  engine.positionIterations = 10; // 기본 6 → 겹침 최소화
+  engine.positionIterations = 10; // 기본 6 → 높여서 공 겹침 최소화
   engine.velocityIterations = 8;  // 기본 4 → 충돌 정확도 향상
-  // 공끼리 겹쳐 보이는 현상을 줄이기 위해 물리 보정 반복 횟수를 올린다.
-  // 이미지 크기를 키우는 방식은 겹침을 더 심하게 만들 수 있어서 사용하지 않는다.
-  // 레퍼런스 기본값 유지 (positionIterations:6, velocityIterations:4)
 
   const opt = { isStatic: true, friction: 1, restitution: 0, frictionStatic: 0.5, label: 'wall' };
   World.add(world, [
@@ -1056,8 +1053,6 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-
-
 function buildEvoRing(activeLevel = 0) {
   // 이미 만들어져 있으면 active 클래스만 교체 (DOM 재생성 방지)
   const ring = document.getElementById('evolution-ring');
@@ -1259,7 +1254,7 @@ function initInput() {
   document.addEventListener('click', e => {
     if (gameOver || !canDrop) return;
     // 버튼, 입력창 등 UI 요소 클릭은 무시
-    if (e.target.closest('button, input, a, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel, .pc-controls, .pc-quick-btns, .pc-title, .credit')) return;
+    if (e.target.closest('button, input, a, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel, .mob-options-panel, .pc-controls, .pc-quick-btns, .pc-title, .credit')) return;
     const rect = canvas.getBoundingClientRect();
     if (e.clientX >= rect.left && e.clientX <= rect.right) return;
     dropX = e.clientX < rect.left ? 0 : BOARD_WIDTH;
@@ -1291,16 +1286,18 @@ async function init() {
   bind('nickname-confirm-btn', 'click', confirmNickname);
   bind('nickname-input', 'keydown', e => { if (e.key === 'Enter') confirmNickname(); });
   bind('restart-btn',       'click', restartGame);
-  bind('mob-restart-btn',   'click', restartGame);
+  bind('mob-restart-btn',   'click', () => { hideMobOptions(); restartGame(); });
   bind('go-restart-btn',    'click', () => { hideGameoverModal(); restartGame(); });
   bind('go-ranking-btn',    'click', () => { hideGameoverModal(); showMobileRanking(); });
   bind('go-nickname-btn',   'click', () => { hideGameoverModal(); showNicknameModal(); });
   bind('mob-ranking-btn',   'click', showMobileRanking);
   bind('mob-ranking-close', 'click', hideMobileRanking);
-  bind('mob-change-nick-btn',  'click', showNicknameModal);
+  bind('mob-change-nick-btn',  'click', () => { hideMobOptions(); showNicknameModal(); });
   bind('change-nickname-btn',  'click', showNicknameModal);
   bind('sound-toggle-btn',     'click', toggleSound);
   bind('mob-sound-btn',        'click', toggleSound);
+  bind('mob-options-btn',      'click', showMobOptions);
+  bind('mob-options-close',    'click', hideMobOptions);
 
   // 닉네임 없으면 모달
   if (!nickname) { showNicknameModal(); }
@@ -1323,6 +1320,8 @@ async function init() {
 function bind(id, ev, fn) { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
 function showMobileRanking() { document.getElementById('mobile-ranking-panel').classList.remove('hidden'); }
 function hideMobileRanking() { document.getElementById('mobile-ranking-panel').classList.add('hidden'); }
+function showMobOptions()    { document.getElementById('mob-options-panel').classList.remove('hidden'); }
+function hideMobOptions()    { document.getElementById('mob-options-panel').classList.add('hidden'); }
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
