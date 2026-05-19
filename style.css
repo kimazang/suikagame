@@ -818,3 +818,196 @@ body {
 @media (max-width: 780px) {
   .pc-panel-btns { display: none !important; }
 }
+
+/* =====================================================
+   모바일 가로 스크롤 완전 차단 패치
+   - style.css 맨 아래에 추가
+===================================================== */
+
+@media (max-width: 780px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden !important;
+    position: relative;
+  }
+
+  body {
+    touch-action: pan-y;
+  }
+
+  .page-wrap,
+  .center-panel,
+  .mobile-info-bar,
+  .canvas-wrap,
+  .mobile-controls,
+  .mobile-evo-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .page-wrap {
+    box-sizing: border-box;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* 상단 점수바: flex 말고 grid로 강제 안정화 */
+  .mobile-info-bar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr) auto !important;
+    align-items: center;
+    gap: 6px !important;
+    padding: 8px 8px !important;
+  }
+
+  .mob-score-group {
+    min-width: 0 !important;
+    width: auto !important;
+    flex: none !important;
+  }
+
+  .mob-label,
+  .mob-val {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mob-val {
+    font-size: clamp(17px, 5vw, 25px) !important;
+  }
+
+  /* 오른쪽 '다음 + 효과음' 그룹이 화면 밖으로 안 밀리게 */
+  .mob-right-group {
+    min-width: 0 !important;
+    max-width: 132px !important;
+    flex-shrink: 1 !important;
+    margin-left: 0 !important;
+    gap: 5px !important;
+  }
+
+  .mob-next-group {
+    flex: 0 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 92px !important;
+    margin-left: 0 !important;
+  }
+
+  .mob-next-img {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .sound-toggle {
+    flex: 0 0 42px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    overflow: hidden;
+  }
+
+  /* 효과음 버튼 안 텍스트가 있으면 모바일에서는 숨김 */
+  .sound-toggle span,
+  .sound-toggle .sound-label {
+    display: none !important;
+  }
+
+  /* 캔버스가 절대 화면 밖으로 안 나가게 */
+  .canvas-wrap {
+    box-sizing: border-box;
+  }
+
+  #game-canvas {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* 하단 제작법: 가로 스크롤 제거하고 화면 안에 맞춤 */
+  .mobile-evo-wrap {
+    box-sizing: border-box;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  .mobile-evolution-row {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    justify-content: space-between !important;
+    gap: 2px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .mobile-evolution-row .ring-item {
+    width: clamp(27px, 7vw, 34px) !important;
+    height: clamp(27px, 7vw, 34px) !important;
+    flex: 0 1 clamp(27px, 7vw, 34px) !important;
+  }
+
+  .mobile-evolution-row .ring-item img {
+    width: 82% !important;
+    height: 82% !important;
+  }
+
+  .mobile-evolution-row .ring-item.active {
+    transform: scale(1.08) !important;
+  }
+
+  /* fixed 바텀시트도 100vw 초과 방지 */
+  .mobile-ranking-panel,
+  .mob-options-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    overflow-x: hidden !important;
+  }
+}
+
+/* 진짜 작은 폰 추가 압축 */
+@media (max-width: 390px) {
+  .mobile-info-bar {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.9fr) auto !important;
+    gap: 4px !important;
+    padding: 7px 6px !important;
+  }
+
+  .mob-label {
+    font-size: 10px !important;
+  }
+
+  .mob-val {
+    font-size: clamp(15px, 4.7vw, 22px) !important;
+  }
+
+  .mob-right-group {
+    max-width: 116px !important;
+    gap: 4px !important;
+  }
+
+  .mob-next-img {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .sound-toggle {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+  }
+
+  .mobile-evolution-row .ring-item {
+    width: 29px !important;
+    height: 29px !important;
+    flex-basis: 29px !important;
+  }
+}
