@@ -1685,3 +1685,198 @@ body {
     margin-bottom: 2px !important;
   }
 }
+
+/* =====================================================
+   TOP 50 랭킹 더보기 UI
+   - PC: TOP 10 아래 작은 more 버튼
+   - MO: 모바일 랭킹창 닫기 옆 more 버튼
+===================================================== */
+.rank-more-btn {
+  border: 1.5px solid var(--border);
+  background: rgba(255,255,255,0.82);
+  color: var(--blue2);
+  border-radius: 999px;
+  font-family: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+  box-shadow: 0 2px 0 rgba(0,80,160,0.10);
+}
+.rank-more-btn:active { transform: translateY(1px) scale(0.98); }
+
+.pc-rank-more {
+  align-self: center;
+  margin-top: 4px;
+  padding: 5px 12px;
+  font-size: 11px;
+  min-height: 24px;
+}
+
+.mobile-ranking-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.mob-rank-more {
+  padding: 7px 11px;
+  font-size: 12px;
+  min-height: 31px;
+}
+
+.full-ranking-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  background: rgba(0, 60, 120, 0.56);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.full-ranking-panel.hidden { display: none; }
+
+.full-ranking-card {
+  width: min(520px, 100%);
+  max-height: min(78vh, 720px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: popIn 0.24s cubic-bezier(0.34,1.56,0.64,1);
+}
+.full-ranking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1.5px solid var(--border);
+  background: linear-gradient(180deg, #ffffff 0%, #eef8ff 100%);
+}
+.full-ranking-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--blue);
+  line-height: 1.1;
+}
+.full-ranking-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.full-ranking-list {
+  padding: 12px 14px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+.full-ranking-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel2);
+  font-size: 13px;
+}
+.full-ranking-row.my-rank {
+  border-color: var(--orange);
+  background: rgba(245,129,31,0.10);
+}
+.full-rank-num {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-dim);
+  text-align: center;
+}
+.full-ranking-row:nth-child(1) .full-rank-num { color: #c8970a; }
+.full-ranking-row:nth-child(2) .full-rank-num { color: #7a8fa6; }
+.full-ranking-row:nth-child(3) .full-rank-num { color: #a0643a; }
+.full-rank-nick {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+  color: var(--text);
+}
+.full-rank-score {
+  white-space: nowrap;
+  font-weight: 900;
+  color: var(--blue);
+  font-size: 12px;
+}
+.full-rank-wm {
+  white-space: nowrap;
+  font-weight: 800;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.full-ranking-loading,
+.full-ranking-empty,
+.full-ranking-error {
+  padding: 24px 10px;
+  text-align: center;
+  color: var(--text-dim);
+  font-weight: 800;
+}
+
+@media (max-width: 780px) {
+  .pc-rank-more { display: none !important; }
+
+  .mobile-ranking-header {
+    gap: 8px !important;
+  }
+  .mobile-ranking-header > span {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  .mobile-ranking-actions .btn {
+    padding: 7px 10px !important;
+    font-size: 12px !important;
+    min-height: 31px !important;
+  }
+
+  .full-ranking-panel {
+    padding: 14px;
+    align-items: end;
+  }
+  .full-ranking-card {
+    width: 100%;
+    max-height: 82vh;
+    border-radius: 22px 22px 18px 18px;
+  }
+  .full-ranking-header {
+    padding: 16px 14px 12px;
+  }
+  .full-ranking-title { font-size: 18px; }
+  .full-ranking-sub { font-size: 11px; }
+  .full-ranking-list {
+    padding: 10px 10px 14px;
+    gap: 6px;
+  }
+  .full-ranking-row {
+    grid-template-columns: 30px minmax(0, 1fr) auto auto;
+    gap: 6px;
+    padding: 8px 8px;
+    min-height: 38px;
+  }
+  .full-rank-score,
+  .full-rank-wm { font-size: 11px; }
+}
+
+@media (min-width: 781px) {
+  .mob-rank-more { display: none !important; }
+}
