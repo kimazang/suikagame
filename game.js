@@ -1400,6 +1400,11 @@ async function init() {
   initPhysics();
   initInput();
 
+  // UI 보강: 기존 HTML/CSS는 최대한 유지하고, 누락된 버튼만 JS로 채운다.
+  // 게임 엔진/물리에는 영향 없음.
+  ensureMobileOptionsPanel();
+  ensureGameoverActionButtons();
+
   // 버튼 바인딩
   bind('nickname-confirm-btn', 'click', confirmNickname);
   bind('nickname-input', 'keydown', e => { if (e.key === 'Enter') confirmNickname(); });
@@ -1439,6 +1444,113 @@ async function init() {
   requestAnimationFrame(gameLoop);
 }
 
+
+// ====================================================
+// UI 보강 — 누락된 버튼 자동 생성
+// ====================================================
+// 모바일 설정 패널 안에 '닉네임 변경하기'와 '처음부터' 버튼이 없거나,
+// 다른 영역에 숨어 있으면 설정 패널 안으로 이동시킨다.
+// 기존 CSS 클래스명은 유지하고, 물리/게임 엔진은 건드리지 않는다.
+function ensureMobileOptionsPanel() {
+  let panel = document.getElementById('mob-options-panel');
+
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'mob-options-panel';
+    panel.className = 'mob-options-panel hidden';
+    document.body.appendChild(panel);
+  }
+
+  let card =
+    panel.querySelector('.mob-options-card') ||
+    panel.querySelector('.mob-options-box') ||
+    panel.querySelector('.panel') ||
+    panel.firstElementChild;
+
+  if (!card || card === panel) {
+    card = document.createElement('div');
+    card.className = 'mob-options-card';
+    panel.appendChild(card);
+  }
+
+  let closeBtn = document.getElementById('mob-options-close');
+  if (!closeBtn) {
+    closeBtn = document.createElement('button');
+    closeBtn.id = 'mob-options-close';
+    closeBtn.type = 'button';
+    closeBtn.className = 'mob-options-close';
+    closeBtn.textContent = '×';
+    closeBtn.setAttribute('aria-label', '닫기');
+  }
+  if (closeBtn.parentElement !== card) {
+    card.insertBefore(closeBtn, card.firstChild);
+  }
+
+  let nickBtn = document.getElementById('mob-change-nick-btn');
+  if (!nickBtn) {
+    nickBtn = document.createElement('button');
+    nickBtn.id = 'mob-change-nick-btn';
+    nickBtn.type = 'button';
+    nickBtn.className = 'mob-options-item';
+  }
+  nickBtn.textContent = '닉네임 변경하기';
+  nickBtn.removeAttribute('aria-hidden');
+  if (nickBtn.parentElement !== card) {
+    card.appendChild(nickBtn);
+  }
+
+  let restartBtn = document.getElementById('mob-restart-btn');
+  if (!restartBtn) {
+    restartBtn = document.createElement('button');
+    restartBtn.id = 'mob-restart-btn';
+    restartBtn.type = 'button';
+    restartBtn.className = 'mob-options-item';
+  }
+  restartBtn.textContent = '처음부터';
+  restartBtn.removeAttribute('aria-hidden');
+  if (restartBtn.parentElement !== card) {
+    card.appendChild(restartBtn);
+  }
+}
+
+// 게임오버 점수 모달 안에 '다시하기' 버튼이 없으면 자동으로 추가한다.
+// 이미 HTML에 있으면 그대로 재사용한다.
+function ensureGameoverActionButtons() {
+  const modal = document.getElementById('gameover-modal');
+  if (!modal) return;
+
+  let actions =
+    modal.querySelector('.gameover-actions') ||
+    modal.querySelector('.go-actions') ||
+    modal.querySelector('.modal-actions');
+
+  if (!actions) {
+    actions = document.createElement('div');
+    actions.className = 'gameover-actions';
+
+    const msg = document.getElementById('go-message');
+    if (msg && msg.parentElement) {
+      msg.insertAdjacentElement('afterend', actions);
+    } else {
+      modal.appendChild(actions);
+    }
+  }
+
+  let restartBtn = document.getElementById('go-restart-btn');
+  if (!restartBtn) {
+    restartBtn = document.createElement('button');
+    restartBtn.id = 'go-restart-btn';
+    restartBtn.type = 'button';
+    restartBtn.className = 'go-restart-btn';
+  }
+
+  restartBtn.textContent = '다시하기';
+
+  if (restartBtn.parentElement !== actions) {
+    actions.insertBefore(restartBtn, actions.firstChild);
+  }
+}
+
 function bind(id, ev, fn) { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
 function showMobileRanking() {
   const el = document.getElementById('mobile-ranking-panel');
@@ -1463,13 +1575,10 @@ function hideMobOptions() {
 function setupMobileHeaderOptions() {
   setupMobileLayoutV3();
 
-  const mobileOnlyButtons = [
-    document.getElementById('mob-restart-btn'),
-    document.getElementById('mob-change-nick-btn'),
-  ];
-
-  mobileOnlyButtons.forEach(btn => {
-    if (btn) btn.setAttribute('aria-hidden', 'true');
+  // 설정 패널 버튼은 실제로 눌러야 하므로 숨김 속성을 제거한다.
+  ['mob-restart-btn', 'mob-change-nick-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.removeAttribute('aria-hidden');
   });
 }
 
