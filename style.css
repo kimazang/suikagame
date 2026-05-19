@@ -1548,28 +1548,28 @@ body {
   }
 
   .credit,
-  .kimazang-credit {
-    position: absolute !important;
+.kimazang-credit {
+  position: absolute !important;
 
-    /* BOARD_WIDTH 544px 기준: 중앙에서 272px + 10px 오른쪽 */
-    left: calc(50% + 272px + 10px) !important;
-    right: auto !important;
-    bottom: 10px !important;
-    top: auto !important;
+  /* 게임판 오른쪽 아래 여백에 자연스럽게 정렬 */
+  left: auto !important;
+  right: calc(50% - 272px) !important;
+  top: calc(100% + 10px) !important;
+  bottom: auto !important;
 
-    z-index: 20 !important;
-    display: block !important;
-    font-size: 12px !important;
-    line-height: 1 !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.2px !important;
-    color: rgba(0, 51, 102, 0.45) !important;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) !important;
-    pointer-events: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    white-space: nowrap !important;
-  }
+  z-index: 20 !important;
+  display: block !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2px !important;
+  color: rgba(0, 51, 102, 0.45) !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap !important;
+}
 }
 
 @media (max-width: 780px) {
