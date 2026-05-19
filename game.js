@@ -336,10 +336,10 @@ function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
     restitution:    0,
-    // PC/모바일 공통 안정화: 마찰은 낮추고 공기저항은 살짝 올려 과한 굴림/회전을 줄인다.
-    friction:       0.55,
-    frictionStatic: 0.35,
-    frictionAir:    0.025,
+    // 자연스러운 굴림 유지형: 너무 미끄럽지도, 너무 빙글거리지도 않게 중간값으로 조정한다.
+    friction:       0.75,
+    frictionStatic: 0.45,
+    frictionAir:    0.015,
     slop:           0.02,
     label:          'ball',
   });
@@ -714,32 +714,11 @@ function renderFrame() {
     ctx.save();
     ctx.translate(x, y);
 
-    // 시각 회전 제한:
-    // 실제 물리 회전값을 그대로 보여주면 모바일에서 알 그림이 과하게 빙글빙글 돌아 보일 수 있다.
-    // 그래서 물리 충돌은 그대로 두고, 화면에 보이는 이미지 회전만 약 20도 안에서 살짝 움직이게 보정한다.
-    if (body.gameData) {
-      const maxVisualSpin = 0.35; // 약 20도
-      const spinInfluence = 0.12;
-
-      if (typeof body.gameData.visualAngle !== 'number') {
-        body.gameData.visualAngle = 0;
-      }
-
-      // 실제 각속도에 조금만 반응해서 생동감은 남긴다.
-      body.gameData.visualAngle += body.angularVelocity * spinInfluence;
-
-      // 한 바퀴씩 빙글빙글 돌지 않도록 시각 회전 범위를 제한한다.
-      if (body.gameData.visualAngle > maxVisualSpin) {
-        body.gameData.visualAngle = maxVisualSpin;
-      } else if (body.gameData.visualAngle < -maxVisualSpin) {
-        body.gameData.visualAngle = -maxVisualSpin;
-      }
-
-      // 멈춰 있을 때는 천천히 정면으로 돌아오게 해서 어색하게 기울어진 채로 붙어 있지 않게 한다.
-      body.gameData.visualAngle *= 0.96;
-
-      ctx.rotate(body.gameData.visualAngle);
-    }
+    // 자연스러운 굴림 유지:
+    // 이미지를 완전히 고정하거나 시각 회전을 강하게 제한하면 공이 안 굴러가는 것처럼 보인다.
+    // 그래서 이미지는 실제 물리 각도에 맞춰 다시 회전시키되, 아래 gameLoop의 약한 각속도 감쇠로
+    // 모바일에서 끝없이 빙글빙글 도는 느낌만 줄인다.
+    ctx.rotate(body.angle);
 
     const canDrawImage =
       img &&
@@ -928,9 +907,10 @@ function dampBallRotation() {
   activeBodies.forEach(body => {
     if (!body || !body.gameData) return;
 
-    body.angularVelocity *= 0.94;
+    // 너무 강하게 잡으면 공이 안 굴러가는 것처럼 보이므로 아주 약하게만 감쇠한다.
+    body.angularVelocity *= 0.985;
 
-    if (Math.abs(body.angularVelocity) < 0.015) {
+    if (Math.abs(body.angularVelocity) < 0.003) {
       Matter.Body.setAngularVelocity(body, 0);
     }
   });
