@@ -1009,6 +1009,8 @@ function showEmptyRanking() {
   `).join('');
   document.getElementById('ranking-list').innerHTML          = rows;
   document.getElementById('mobile-ranking-list').innerHTML   = rows;
+  mobileTopLeader = null;
+  updateMobileRankingButton(null);
 }
 
 function renderRanking(data, myRankData = null) {
@@ -1047,6 +1049,7 @@ function renderRanking(data, myRankData = null) {
   const html = rows + myRow;
   document.getElementById('ranking-list').innerHTML        = html;
   document.getElementById('mobile-ranking-list').innerHTML = html;
+  updateMobileRankingButton(data && data.length ? data[0] : null);
 }
 
 function escHtml(s) {
@@ -1262,6 +1265,83 @@ function initInput() {
   });
 }
 
+
+
+// ====================================================
+// 모바일 UI v3 — 상단바/제작법/랭킹 버튼 정리
+// ====================================================
+let mobileTopLeader = null;
+
+function setMobileStatLabel(valueId, labelText) {
+  const valueEl = document.getElementById(valueId);
+  const group = valueEl ? valueEl.closest('.mob-score-group') : null;
+  const label = group ? group.querySelector('.mob-label') : null;
+  if (label) label.textContent = labelText;
+  return group;
+}
+
+function setupMobileLayoutV3() {
+  const infoBar = document.querySelector('.mobile-info-bar');
+  if (!infoBar) return;
+
+  const scoreGroup = setMobileStatLabel('mob-score', '점수');
+  const wmGroup    = setMobileStatLabel('mob-wm', '1991👄');
+  const bestGroup  = setMobileStatLabel('mob-best', '내 기록');
+
+  const nextGroup  = infoBar.querySelector('.mob-next-group');
+  const soundBtn   = document.getElementById('mob-sound-btn');
+  const optionsBtn = document.getElementById('mob-options-btn');
+
+  let rightGroup = infoBar.querySelector('.mob-right-group');
+  if (!rightGroup) {
+    rightGroup = document.createElement('div');
+    rightGroup.className = 'mob-right-group';
+  }
+
+  // 모바일 상단바 순서 고정: 점수 / 1991👄 / 내 기록 / 오른쪽 묶음
+  [scoreGroup, wmGroup, bestGroup].forEach(el => {
+    if (el && el.parentElement !== infoBar) infoBar.appendChild(el);
+  });
+  if (rightGroup.parentElement !== infoBar) infoBar.appendChild(rightGroup);
+
+  if (nextGroup && nextGroup.parentElement !== rightGroup) rightGroup.appendChild(nextGroup);
+  if (soundBtn && soundBtn.parentElement !== rightGroup) rightGroup.appendChild(soundBtn);
+  if (optionsBtn && optionsBtn.parentElement !== rightGroup) rightGroup.appendChild(optionsBtn);
+
+  if (optionsBtn) {
+    optionsBtn.classList.add('mob-top-options-btn');
+    optionsBtn.textContent = '⚙';
+    optionsBtn.setAttribute('aria-label', '설정');
+    optionsBtn.setAttribute('title', '설정');
+  }
+
+  // 1991 제작법이 랭킹 버튼보다 위에 오도록 모바일 DOM 순서 보정
+  const centerPanel = document.querySelector('.center-panel');
+  const evoWrap = document.querySelector('.mobile-evo-wrap');
+  const mobileControls = document.querySelector('.mobile-controls');
+  if (centerPanel && evoWrap && mobileControls && evoWrap.compareDocumentPosition(mobileControls) & Node.DOCUMENT_POSITION_PRECEDING) {
+    centerPanel.insertBefore(evoWrap, mobileControls);
+  }
+
+  updateMobileRankingButton();
+}
+
+function updateMobileRankingButton(leader = mobileTopLeader) {
+  if (leader) mobileTopLeader = leader;
+
+  const btn = document.getElementById('mob-ranking-btn');
+  if (!btn) return;
+
+  const leaderText = mobileTopLeader
+    ? `1등 ${escHtml(mobileTopLeader.nickname || '-')} · ${Number(mobileTopLeader.score || 0).toLocaleString()}P`
+    : '1등 집계 중';
+
+  btn.innerHTML = `
+    <span class="rank-btn-title">랭킹 확인하기</span>
+    <span class="rank-btn-leader">${leaderText}</span>
+  `;
+}
+
 // ====================================================
 // 초기화
 // ====================================================
@@ -1342,29 +1422,8 @@ function hideMobOptions() {
 // 기존 HTML에 있는 #mob-options-btn을 새로 만들지 않고 상단 정보바의 제일 오른쪽으로 옮긴다.
 // PC에서는 CSS로 숨겨진 상태를 유지하고, 모바일에서만 설정 버튼처럼 보이게 한다.
 function setupMobileHeaderOptions() {
-  const infoBar = document.querySelector('.mobile-info-bar');
-  const optionsBtn = document.getElementById('mob-options-btn');
+  setupMobileLayoutV3();
 
-  if (!infoBar || !optionsBtn) return;
-
-  let rightGroup = infoBar.querySelector('.mob-right-group');
-  if (!rightGroup) {
-    rightGroup = document.createElement('div');
-    rightGroup.className = 'mob-right-group';
-    infoBar.appendChild(rightGroup);
-  }
-
-  // 옵션 버튼이 하단에 있었으면 상단 오른쪽 그룹으로 이동
-  if (optionsBtn.parentElement !== rightGroup) {
-    rightGroup.appendChild(optionsBtn);
-  }
-
-  optionsBtn.classList.add('mob-top-options-btn');
-  optionsBtn.textContent = '⚙';
-  optionsBtn.setAttribute('aria-label', '설정');
-  optionsBtn.setAttribute('title', '설정');
-
-  // 혹시 기존 하단 버튼들이 남아 있어도 JS 차원에서 모바일에서는 표시하지 않도록 보조 처리
   const mobileOnlyButtons = [
     document.getElementById('mob-restart-btn'),
     document.getElementById('mob-change-nick-btn'),
