@@ -1249,3 +1249,253 @@ body {
     height: 36px !important;
   }
 }
+
+
+/* =====================================================
+   모바일 UI 재정렬 v3
+   - 모바일만 적용
+   - 상단: 점수 / 1991👄 / 내 기록 / 다음+공 / 사운드 / 설정
+   - 1991 제작법을 랭킹보다 위로
+   - 랭킹 버튼에 1등 닉네임+점수 표시
+===================================================== */
+@media (max-width: 780px) {
+  .page-wrap {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .mobile-info-bar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 5px !important;
+    padding: 8px 7px !important;
+    border-radius: 14px !important;
+    overflow: visible !important;
+  }
+
+  .mobile-info-bar .mob-score-group {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: none !important;
+    padding: 3px 2px !important;
+    border-radius: 10px !important;
+    background: rgba(232, 245, 255, 0.72) !important;
+  }
+
+  .mobile-info-bar .mob-label {
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.2px !important;
+    white-space: nowrap !important;
+    color: var(--text-dim) !important;
+  }
+
+  .mobile-info-bar .mob-val {
+    font-size: clamp(16px, 4.5vw, 22px) !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+    color: var(--blue) !important;
+  }
+
+  /* 현재 점수와 현재 1991 개수는 같은 색 */
+  #mob-score,
+  #mob-wm {
+    color: var(--blue) !important;
+  }
+
+  /* 내 기록만 최고기록 느낌 */
+  #mob-best {
+    color: var(--gold) !important;
+  }
+
+  .mob-right-group {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+    margin-left: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 다음 공: 글자 옆에 얼굴 */
+  .mob-next-group {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    width: auto !important;
+    min-width: 58px !important;
+    max-width: none !important;
+    height: 34px !important;
+    padding: 3px 5px !important;
+    margin-left: 0 !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: 10px !important;
+    background: var(--panel2) !important;
+    flex: 0 0 auto !important;
+  }
+
+  .mob-next-group .mob-label {
+    font-size: 10px !important;
+    line-height: 1 !important;
+  }
+
+  .mob-next-img {
+    width: 28px !important;
+    height: 28px !important;
+    object-fit: contain !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* 사운드: 동그라미 말고 가로 직사각형 단추 */
+  #mob-sound-btn,
+  .mob-right-group .sound-toggle {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 58px !important;
+    width: 58px !important;
+    min-width: 58px !important;
+    height: 34px !important;
+    padding: 0 8px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.2px !important;
+    line-height: 1 !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 0 rgba(0,80,160,0.12) !important;
+  }
+
+  /* 설정: 공간 길게 차지하지 않게 */
+  #mob-options-btn,
+  .mob-top-options-btn {
+    display: inline-grid !important;
+    place-items: center !important;
+    flex: 0 0 34px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    font-size: 17px !important;
+    line-height: 1 !important;
+    box-shadow: 0 2px 0 rgba(0,80,160,0.12) !important;
+  }
+
+  /* 하단: 제작법 먼저, 그 다음 랭킹 버튼 */
+  .mobile-evo-wrap {
+    order: 3 !important;
+    margin-top: 0 !important;
+  }
+
+  .mobile-controls {
+    order: 4 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 8px !important;
+    gap: 8px !important;
+  }
+
+  #mob-ranking-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-height: 52px !important;
+    padding: 10px 13px !important;
+    border-radius: 14px !important;
+    font-size: 15px !important;
+    line-height: 1.15 !important;
+    text-align: left !important;
+  }
+
+  #mob-ranking-btn .rank-btn-title {
+    font-size: 15px !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+  }
+
+  #mob-ranking-btn .rank-btn-leader {
+    min-width: 0 !important;
+    max-width: 58% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    opacity: 0.95 !important;
+    text-align: right !important;
+  }
+
+  #mob-restart-btn,
+  #mob-change-nick-btn {
+    display: none !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .page-wrap {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .mobile-info-bar {
+    grid-template-columns: minmax(0, .86fr) minmax(0, .86fr) minmax(0, .92fr) auto !important;
+    gap: 4px !important;
+    padding: 7px 5px !important;
+  }
+
+  .mobile-info-bar .mob-label {
+    font-size: 9px !important;
+  }
+
+  .mobile-info-bar .mob-val {
+    font-size: clamp(14px, 4.25vw, 19px) !important;
+  }
+
+  .mob-right-group {
+    gap: 3px !important;
+  }
+
+  .mob-next-group {
+    min-width: 52px !important;
+    height: 32px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  .mob-next-img {
+    width: 25px !important;
+    height: 25px !important;
+  }
+
+  #mob-sound-btn,
+  .mob-right-group .sound-toggle {
+    flex-basis: 50px !important;
+    width: 50px !important;
+    min-width: 50px !important;
+    height: 32px !important;
+    padding: 0 5px !important;
+    font-size: 11px !important;
+  }
+
+  #mob-options-btn,
+  .mob-top-options-btn {
+    flex-basis: 32px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+  }
+}
