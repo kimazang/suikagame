@@ -1299,6 +1299,9 @@ async function init() {
   bind('mob-options-btn',      'click', showMobOptions);
   bind('mob-options-close',    'click', hideMobOptions);
 
+  // 모바일 전용: 설정 버튼을 상단 정보바 오른쪽으로 이동
+  setupMobileHeaderOptions();
+
   // 닉네임 없으면 모달
   if (!nickname) { showNicknameModal(); }
   else { updatePlayerDisplay(); }
@@ -1318,10 +1321,59 @@ async function init() {
 }
 
 function bind(id, ev, fn) { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
-function showMobileRanking() { document.getElementById('mobile-ranking-panel').classList.remove('hidden'); }
-function hideMobileRanking() { document.getElementById('mobile-ranking-panel').classList.add('hidden'); }
-function showMobOptions()    { document.getElementById('mob-options-panel').classList.remove('hidden'); }
-function hideMobOptions()    { document.getElementById('mob-options-panel').classList.add('hidden'); }
+function showMobileRanking() {
+  const el = document.getElementById('mobile-ranking-panel');
+  if (el) el.classList.remove('hidden');
+}
+function hideMobileRanking() {
+  const el = document.getElementById('mobile-ranking-panel');
+  if (el) el.classList.add('hidden');
+}
+function showMobOptions() {
+  const el = document.getElementById('mob-options-panel');
+  if (el) el.classList.remove('hidden');
+}
+function hideMobOptions() {
+  const el = document.getElementById('mob-options-panel');
+  if (el) el.classList.add('hidden');
+}
+
+// 모바일 전용 UI 보정
+// 기존 HTML에 있는 #mob-options-btn을 새로 만들지 않고 상단 정보바의 제일 오른쪽으로 옮긴다.
+// PC에서는 CSS로 숨겨진 상태를 유지하고, 모바일에서만 설정 버튼처럼 보이게 한다.
+function setupMobileHeaderOptions() {
+  const infoBar = document.querySelector('.mobile-info-bar');
+  const optionsBtn = document.getElementById('mob-options-btn');
+
+  if (!infoBar || !optionsBtn) return;
+
+  let rightGroup = infoBar.querySelector('.mob-right-group');
+  if (!rightGroup) {
+    rightGroup = document.createElement('div');
+    rightGroup.className = 'mob-right-group';
+    infoBar.appendChild(rightGroup);
+  }
+
+  // 옵션 버튼이 하단에 있었으면 상단 오른쪽 그룹으로 이동
+  if (optionsBtn.parentElement !== rightGroup) {
+    rightGroup.appendChild(optionsBtn);
+  }
+
+  optionsBtn.classList.add('mob-top-options-btn');
+  optionsBtn.textContent = '⚙';
+  optionsBtn.setAttribute('aria-label', '설정');
+  optionsBtn.setAttribute('title', '설정');
+
+  // 혹시 기존 하단 버튼들이 남아 있어도 JS 차원에서 모바일에서는 표시하지 않도록 보조 처리
+  const mobileOnlyButtons = [
+    document.getElementById('mob-restart-btn'),
+    document.getElementById('mob-change-nick-btn'),
+  ];
+
+  mobileOnlyButtons.forEach(btn => {
+    if (btn) btn.setAttribute('aria-hidden', 'true');
+  });
+}
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
