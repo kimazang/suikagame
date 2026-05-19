@@ -1247,6 +1247,21 @@ function showNicknameModal() {
   const inp = document.getElementById('nickname-input');
   inp.value = nickname || '';
   document.getElementById('nickname-error').textContent = '';
+
+  // 기존 닉네임 있으면(=변경 중) X 버튼 표시, 신규 유저는 숨김
+  const box = document.querySelector('#nickname-modal .modal-box');
+  let closeBtn = document.getElementById('nickname-close-btn');
+  if (!closeBtn) {
+    closeBtn = document.createElement('button');
+    closeBtn.id = 'nickname-close-btn';
+    closeBtn.textContent = '\u2715';
+    closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#5588aa;line-height:1;padding:4px;';
+    closeBtn.addEventListener('click', hideNicknameModal);
+    box.style.position = 'relative';
+    box.appendChild(closeBtn);
+  }
+  closeBtn.style.display = nickname ? 'block' : 'none';
+
   setTimeout(() => inp.focus(), 100);
 }
 function hideNicknameModal() { document.getElementById('nickname-modal').classList.add('hidden'); }
