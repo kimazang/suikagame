@@ -1146,10 +1146,9 @@ body {
     transform: scale(0.94) !important;
   }
 
-  /* 하단 컨트롤에 같은 버튼이 있을 때만 숨김
-     옵션 바텀시트 안 버튼은 숨기지 않는다. */
-  .mobile-controls #mob-restart-btn,
-  .mobile-controls #mob-change-nick-btn {
+  /* 하단에서 잘못 누르던 다시하기/닉변 버튼은 모바일에서 숨김 */
+  #mob-restart-btn,
+  #mob-change-nick-btn {
     display: none !important;
   }
 
@@ -1442,17 +1441,9 @@ body {
     text-align: right !important;
   }
 
-  /* 하단 컨트롤에 같은 버튼이 있을 때만 숨김
-     옵션 바텀시트 안 버튼은 표시한다. */
-  .mobile-controls #mob-restart-btn,
-  .mobile-controls #mob-change-nick-btn {
+  #mob-restart-btn,
+  #mob-change-nick-btn {
     display: none !important;
-  }
-
-  .mob-options-panel #mob-restart-btn,
-  .mob-options-panel #mob-change-nick-btn {
-    display: inline-flex !important;
-    width: 100% !important;
   }
 }
 
@@ -1588,30 +1579,109 @@ body {
     display: none !important;
   }
 }
-
 /* =====================================================
-   모바일 옵션 버튼 표시 보정 FINAL
-   - 게임판 아래 버튼은 숨김 유지
-   - 톱니바퀴 옵션 패널 안 버튼은 반드시 표시
+   모바일 옵션창 / 게임오버 모달 UI 정리 패치 v2
+   - 엔진/JS 로직 건드리지 않음
+   - 모바일 옵션창: 제목 가로 정렬, X 우상단 고정, 버튼 세로 정렬
+   - 게임오버 모달: 버튼 간격/정렬 개선
 ===================================================== */
 @media (max-width: 780px) {
-  .mobile-controls #mob-restart-btn,
-  .mobile-controls #mob-change-nick-btn {
-    display: none !important;
+  /* 옵션 바텀시트 */
+  .mob-options-panel {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    border: 2px solid var(--border) !important;
+    border-radius: 24px !important;
+    padding: 18px 16px 16px !important;
+    box-shadow: 0 14px 36px rgba(0, 80, 160, 0.22) !important;
+    overflow: visible !important;
   }
 
-  .mob-options-panel #mob-restart-btn,
-  .mob-options-panel #mob-change-nick-btn {
+  .mob-options-header {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    min-height: 32px !important;
+    margin-bottom: 14px !important;
+    padding-right: 48px !important;
+  }
+
+  .mob-options-header span {
     display: inline-flex !important;
     align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    min-height: 52px !important;
+    gap: 6px !important;
+    font-size: 18px !important;
+    line-height: 1.2 !important;
+    font-weight: 900 !important;
+    color: var(--blue) !important;
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
   }
 
-  .mob-options-panel .mob-options-body {
+  #mob-options-close {
+    position: absolute !important;
+    top: -2px !important;
+    right: 0 !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    border-radius: 999px !important;
+    border: 2px solid var(--border) !important;
+    background: #fff !important;
+    color: var(--blue2) !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+    box-shadow: 0 3px 10px rgba(0, 80, 160, 0.12) !important;
+  }
+
+  .mob-options-body {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .mob-options-body .btn {
+    width: 100% !important;
+    min-height: 54px !important;
+    padding: 14px 18px !important;
+    font-size: 18px !important;
+    border-radius: 18px !important;
+    justify-content: center !important;
+  }
+
+  /* 게임오버 모달 */
+  #gameover-modal .modal-box {
+    width: min(92vw, 420px) !important;
+    padding: 28px 22px 24px !important;
+  }
+
+  #gameover-modal .go-message {
+    margin-bottom: 18px !important;
+  }
+
+  #gameover-modal .go-buttons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    margin-top: 10px !important;
+    align-items: stretch !important;
+  }
+
+  #gameover-modal .go-buttons .btn {
+    width: 100% !important;
+    min-height: 58px !important;
+    padding: 14px 18px !important;
+    font-size: 18px !important;
+    border-radius: 18px !important;
+  }
+
+  #go-restart-btn {
+    margin-bottom: 2px !important;
   }
 }
