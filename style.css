@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
-
 /* =====================================================
    큐플 합치기 — style.css
    테마: 큐플레이 스타일 (밝은 파란색)
@@ -161,7 +159,7 @@ body {
   gap: 18px;
   max-width: 1160px;
   margin: 0 auto;
-  padding: 4px 14px 40px;
+  padding: 18px 14px 40px;
   align-items: start;
 }
 
@@ -259,130 +257,17 @@ body {
   background: var(--panel);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px 10px;
+  padding: 10px 14px;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   box-shadow: var(--shadow);
 }
-.mob-score-group { display: flex; flex-direction: column; align-items: center; min-width: 38px; }
+.mob-score-group { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
 .mob-label { font-size: 10px; color: var(--text-dim); font-weight: 700; }
-.mob-val   { font-size: 15px; font-weight: 900; color: var(--text); }
+.mob-val   { font-size: 16px; font-weight: 900; color: var(--text); }
 .mob-val.gold { color: var(--gold); }
 .mob-next-group { display: flex; flex-direction: column; align-items: center; margin-left: auto; }
 .mob-next-img   { width: 36px; height: 36px; object-fit: contain; }
-
-/* PC 타이틀 */
-.pc-title {
-  text-align: center;
-  font-size: 38px;
-  font-family: 'Jua', sans-serif;
-  font-weight: 400;
-  color: var(--white);
-  letter-spacing: 2px;
-  padding: 44px 0 6px;
-  text-shadow: 0 3px 12px rgba(0,80,160,0.3), 0 1px 0 rgba(255,255,255,0.3);
-}
-
-/* PC 하단 버튼 */
-.pc-controls {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  max-width: 544px;
-  justify-content: center;
-}
-
-/* 크레딧 */
-.credit {
-  position: fixed;
-  right: 14px;
-  bottom: 10px;
-  font-size: 11px;
-  color: rgba(255,255,255,0.45);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  pointer-events: none;
-  z-index: 10;
-}
-
-/* 효과음 토글 버튼 */
-.sound-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: none;
-  border-radius: 999px;
-  padding: 5px 12px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  font-family: inherit;
-  white-space: nowrap;
-}
-.sound-toggle.on  { background: var(--blue);  color: #fff; }
-.sound-toggle.off { background: rgba(255,255,255,0.55); color: var(--text-dim); border: 1.5px solid var(--border); }
-
-/* PC 패널 버튼들 */
-.pc-panel-btns {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-.pc-panel-btns .btn-full,
-.pc-panel-btns .sound-toggle {
-  width: 100%;
-  justify-content: center;
-}
-
-/* 모바일 옵션 바텀시트 */
-.mob-options-panel {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 150;
-  background: var(--panel);
-  border-top: 2px solid var(--border);
-  border-radius: 20px 20px 0 0;
-  padding: 16px;
-  box-shadow: 0 -8px 32px rgba(0,80,160,0.2);
-  animation: slideUp 0.25s ease;
-}
-.mob-options-panel.hidden { display: none; }
-.mob-options-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 900;
-  font-size: 16px;
-  color: var(--blue);
-  margin-bottom: 14px;
-}
-.mob-options-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* 모바일 정보바 오른쪽 그룹 */
-.mob-right-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.mob-next-group {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  background: var(--panel2);
-  border-radius: 10px;
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  flex-shrink: 0;
-}
 
 /* 캔버스 래퍼 */
 .canvas-wrap {
@@ -587,94 +472,18 @@ body {
 }
 
 @media (max-width: 780px) {
-  body { background-attachment: scroll; overflow-x: hidden; }
-
+  body { background-attachment: scroll; }
   .page-wrap {
     grid-template-columns: 1fr;
-    padding: 0 0 80px;
-    gap: 8px;
+    padding: 10px 10px 100px;
+    gap: 10px;
   }
-  .left-panel   { display: none; }
-  .right-panel  { display: none; }
-  .pc-title    { display: none !important; }
-  .pc-controls { display: none !important; }
-  .credit       { display: none !important; }
-
-  /* 정보바: 한 줄로 전부 표시 */
-  .mobile-info-bar {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    margin: 0;
-    padding: 8px 12px;
-    gap: 8px;
-    border-radius: 0;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .mob-score-group { min-width: 32px; }
-  .mob-val { font-size: 14px; }
-  .mob-label { font-size: 9px; }
-
-  /* 다음 구슬: 라벨+이미지 가로, 배경 구분 */
-  .mob-next-group {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
-    margin-left: auto;
-    background: var(--panel2);
-    border-radius: 10px;
-    padding: 3px 8px;
-    border: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .mob-next-img { width: 32px; height: 32px; }
-
-  /* 닉네임+사운드 버튼 묶음 */
-  .mob-change-nick-area {
-    display: flex;
-    gap: 5px;
-    flex-shrink: 0;
-  }
-
-  /* 캔버스: 양쪽 20px 여백 */
-  .canvas-wrap {
-    max-width: calc(100% - 40px);
-    margin: 0 auto;
-  }
-
-  /* 하단 버튼: 가운데 정렬 */
-  .mobile-controls { display: flex; justify-content: center; gap: 10px; margin: 0 12px; }
-  .pc-panel-btns { display: none !important; }
-
-  /* 진화의 고리: 한 줄 자체 스크롤 */
-  .mobile-evo-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    gap: 8px;
-  }
-  .mobile-evolution-row {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    overflow-x: auto;
-    gap: 6px;
-    padding: 4px 12px;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .mobile-evolution-row .ring-item {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-  }
-  .mobile-evolution-row .ring-item img {
-    width: 28px;
-    height: 28px;
-  }
+  .left-panel  { display: none; }
+  .right-panel { display: none; }
+  .mobile-info-bar  { display: flex; }
+  .mobile-controls  { display: flex; }
+  .canvas-wrap { max-width: 100%; }
+  .mobile-evo-wrap  { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 8px; }
 }
 
 .canvas-wrap.shake-hard {
@@ -715,4 +524,297 @@ body {
   90%  { transform: translateX(1px); }
   94%  { transform: translateX(-1px); }
   100% { transform: translateX(0); }
+}
+
+
+/* =====================================================
+   모바일 전용 UI 보정 v2 — PC 영향 없음
+===================================================== */
+@media (max-width: 780px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100svh;
+  }
+
+  .page-wrap {
+    width: 100%;
+    max-width: 100vw;
+    padding: 10px 10px 90px;
+    gap: 10px;
+    overflow-x: hidden;
+  }
+
+  .center-panel {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* 상단 점수바 */
+  .mobile-info-bar {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 10px 10px;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .mob-score-group {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .mob-label {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .mob-val {
+    font-size: clamp(18px, 5.4vw, 28px);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .mob-next-group {
+    flex: 0 0 48px;
+    width: 48px;
+    min-width: 48px;
+    margin-left: 0;
+  }
+
+  .mob-next-img {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* 게임판은 화면 안에만 꽉 차게 */
+  .canvas-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  #game-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* 버튼 2개가 화면 밖으로 안 나가게 */
+  .mobile-controls {
+    width: 100%;
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .mobile-controls .btn {
+    width: 100%;
+    min-width: 0;
+    padding: 13px 8px;
+    font-size: clamp(17px, 4.8vw, 22px);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  /* 하단 제작법 박스 */
+  .mobile-evo-wrap {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 8px 12px;
+    overflow: hidden;
+  }
+
+  .mobile-evolution-row {
+    width: 100%;
+    max-width: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 6px 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-evolution-row .ring-item {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+  }
+
+  .mobile-evolution-row .ring-item img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .mobile-evolution-row .ring-item.active {
+    transform: scale(1.16);
+  }
+}
+
+/* 작은 폰 추가 보정 */
+@media (max-width: 390px) {
+  .page-wrap {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .mobile-info-bar {
+    padding: 9px 8px;
+  }
+
+  .mob-label {
+    font-size: 10px;
+  }
+
+  .mob-val {
+    font-size: clamp(17px, 5vw, 24px);
+  }
+
+  .mob-next-group {
+    flex-basis: 42px;
+    width: 42px;
+    min-width: 42px;
+  }
+
+  .mob-next-img {
+    width: 35px;
+    height: 35px;
+  }
+
+  .mobile-controls {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+    gap: 7px;
+  }
+
+  .mobile-controls .btn {
+    padding: 12px 6px;
+    font-size: 16px;
+  }
+
+  .mobile-evolution-row .ring-item {
+    width: 31px;
+    height: 31px;
+    flex-basis: 31px;
+  }
+
+  .mobile-evolution-row .ring-item img {
+    width: 25px;
+    height: 25px;
+  }
+}
+
+
+/* 모바일 버튼 하단 잘림 보정 */
+@media (max-width: 780px) {
+  .mobile-controls {
+    overflow: visible;
+    padding-bottom: 9px;
+    margin-bottom: 2px;
+  }
+
+  .mobile-controls .btn {
+    min-height: 58px;
+    padding-top: 12px;
+    padding-bottom: 15px;
+  }
+
+  .mobile-controls .btn-orange {
+    box-shadow: 0 5px 0 var(--orange2);
+  }
+
+  .mobile-controls .btn-blue {
+    box-shadow: 0 5px 0 var(--blue2);
+  }
+
+  .mobile-controls .btn-orange:active {
+    transform: translateY(3px) scale(0.98);
+    box-shadow: 0 2px 0 var(--orange2);
+  }
+
+  .mobile-controls .btn-blue:active {
+    transform: translateY(3px) scale(0.98);
+    box-shadow: 0 2px 0 var(--blue2);
+  }
+}
+
+/* PC 패널 버튼들 */
+.pc-panel-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.pc-panel-btns .btn,
+.pc-panel-btns .sound-toggle {
+  width: 100%;
+  justify-content: center;
+}
+
+/* 효과음 토글 버튼 */
+.sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.sound-toggle.on  { background: var(--blue); color: #fff; }
+.sound-toggle.off { background: rgba(255,255,255,0.55); color: var(--text-dim); border: 1.5px solid var(--border); }
+
+/* 모바일 옵션 바텀시트 */
+.mob-options-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 150;
+  background: var(--panel);
+  border-top: 2px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 16px;
+  box-shadow: 0 -8px 32px rgba(0,80,160,0.2);
+  animation: slideUp 0.25s ease;
+}
+.mob-options-panel.hidden { display: none; }
+.mob-options-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--blue);
+  margin-bottom: 14px;
+}
+.mob-options-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 모바일 정보바 오른쪽 그룹 */
+.mob-right-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 780px) {
+  .pc-panel-btns { display: none !important; }
 }
