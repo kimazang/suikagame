@@ -297,9 +297,9 @@ let engine, world;
 function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
-  engine.gravity.y = 2.5; // PHYSICS_SPEED=1.0 기준 낙하속도 보정
-  engine.positionIterations = 10; // 기본 6 → 높여서 공 겹침 최소화
-  engine.velocityIterations = 8;  // 기본 4 → 충돌 정확도 향상
+  engine.gravity.y = 2.0;
+engine.positionIterations = 8;
+engine.velocityIterations = 6;
 
   const opt = { isStatic: true, friction: 1, restitution: 0, frictionStatic: 0.5, label: 'wall' };
   World.add(world, [
@@ -334,14 +334,14 @@ function randomDropLevel() {
 function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-    restitution:    0,
-    friction:       1,
-    frictionStatic: 0.5,
-    frictionAir:    0.01,
-    angularDamping: 0.95, // 멈추면 회전 빠르게 안정화 (낙하속도 영향 없음)
-    slop:           0.01,
-    label:          'ball',
-  });
+  restitution:    0,
+  friction:       1,
+  frictionStatic: 0.5,
+  frictionAir:    0.01,
+  angularDamping: 0.95,
+  slop:           0.02,
+  label:          'ball',
+});
 
   ballIdCnt++;
   body.gameData = {
