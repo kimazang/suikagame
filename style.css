@@ -1146,9 +1146,10 @@ body {
     transform: scale(0.94) !important;
   }
 
-  /* 하단에서 잘못 누르던 다시하기/닉변 버튼은 모바일에서 숨김 */
-  #mob-restart-btn,
-  #mob-change-nick-btn {
+  /* 하단 컨트롤에 같은 버튼이 있을 때만 숨김
+     옵션 바텀시트 안 버튼은 숨기지 않는다. */
+  .mobile-controls #mob-restart-btn,
+  .mobile-controls #mob-change-nick-btn {
     display: none !important;
   }
 
@@ -1441,9 +1442,17 @@ body {
     text-align: right !important;
   }
 
-  #mob-restart-btn,
-  #mob-change-nick-btn {
+  /* 하단 컨트롤에 같은 버튼이 있을 때만 숨김
+     옵션 바텀시트 안 버튼은 표시한다. */
+  .mobile-controls #mob-restart-btn,
+  .mobile-controls #mob-change-nick-btn {
     display: none !important;
+  }
+
+  .mob-options-panel #mob-restart-btn,
+  .mob-options-panel #mob-change-nick-btn {
+    display: inline-flex !important;
+    width: 100% !important;
   }
 }
 
@@ -1577,5 +1586,32 @@ body {
   .credit,
   .kimazang-credit {
     display: none !important;
+  }
+}
+
+/* =====================================================
+   모바일 옵션 버튼 표시 보정 FINAL
+   - 게임판 아래 버튼은 숨김 유지
+   - 톱니바퀴 옵션 패널 안 버튼은 반드시 표시
+===================================================== */
+@media (max-width: 780px) {
+  .mobile-controls #mob-restart-btn,
+  .mobile-controls #mob-change-nick-btn {
+    display: none !important;
+  }
+
+  .mob-options-panel #mob-restart-btn,
+  .mob-options-panel #mob-change-nick-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-height: 52px !important;
+  }
+
+  .mob-options-panel .mob-options-body {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
   }
 }
