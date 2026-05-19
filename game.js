@@ -1,6 +1,6 @@
 /**
  * 1991 만들기 — game.js
- * - 물리: Matter.js (gravity 1.0, friction 1, restitution 0, frictionStatic 0.5)
+ * - 물리: Matter.js (고정 타임스텝, 회전 감쇠, 이미지 회전 제거)
  * - 점수: 레퍼런스 삼각수 기준 [1,3,6,10,15,21,28,36,45,55,66]
  * - 공 크기: 레퍼런스 지름 기준 환산
  * - 드롭: 1~5단계 균등 랜덤, 쿨다운 600ms
@@ -43,7 +43,8 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 // 전체 물리 속도 보정
 // 1.00 = 기존 속도, 1.15 = 15% 빠르게, 1.25 = 25% 빠르게
 const PHYSICS_SPEED = 1.0;
-const MAX_PHYSICS_DELTA = 50; // 모바일 렉/프레임 저하 시 튐 방지용 상한 ms
+const MAX_PHYSICS_DELTA = 100; // 프레임 급락 시 누적 물리 튐 방지용 상한 ms
+const FIXED_PHYSICS_STEP = 1000 / 60; // PC/모바일 공통 고정 물리 스텝
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
@@ -334,14 +335,14 @@ function randomDropLevel() {
 function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-  restitution:    0,
-  friction:       1,
-  frictionStatic: 0.5,
-  frictionAir:    0.01,
-  angularDamping: 0.95,
-  slop:           0.02,
-  label:          'ball',
-});
+    restitution:    0,
+    // PC/모바일 공통 안정화: 마찰은 낮추고 공기저항은 살짝 올려 과한 굴림/회전을 줄인다.
+    friction:       0.55,
+    frictionStatic: 0.35,
+    frictionAir:    0.025,
+    slop:           0.02,
+    label:          'ball',
+  });
 
   ballIdCnt++;
   body.gameData = {
@@ -712,7 +713,9 @@ function renderFrame() {
 
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(body.angle);
+    // 캐릭터/과일 이미지가 계속 빙글빙글 도는 느낌을 줄이기 위해 렌더링 회전은 제거한다.
+    // 물리 충돌체는 원형이라 이미지 회전을 빼도 충돌/합체 판정에는 영향이 없다.
+    // ctx.rotate(body.angle);
 
     const canDrawImage =
       img &&
@@ -885,6 +888,7 @@ function restartGame() {
 
   // 게임루프 재시작
   lastFrameTime = performance.now();
+  physicsAccumulator = 0;
   requestAnimationFrame(gameLoop);
 }
 
@@ -892,16 +896,39 @@ function restartGame() {
 // 메인 게임 루프
 // ====================================================
 let lastFrameTime = performance.now();
+let physicsAccumulator = 0;
+
+// Matter.js 옵션에 의존하지 않고, 실제 각속도를 직접 감쇠한다.
+// 고정 타임스텝 안에서 호출하므로 PC/모바일 모두 같은 기준으로 회전이 줄어든다.
+function dampBallRotation() {
+  activeBodies.forEach(body => {
+    if (!body || !body.gameData) return;
+
+    body.angularVelocity *= 0.94;
+
+    if (Math.abs(body.angularVelocity) < 0.015) {
+      Matter.Body.setAngularVelocity(body, 0);
+    }
+  });
+}
 
 function gameLoop(now = performance.now()) {
-  const rawDelta = now - lastFrameTime;
-  const delta = Math.min(rawDelta, MAX_PHYSICS_DELTA);
+  let frameDelta = now - lastFrameTime;
   lastFrameTime = now;
 
+  // 모바일/저사양 환경에서 프레임이 크게 튀어도 한 번에 과한 물리 계산이 들어가지 않게 제한한다.
+  frameDelta = Math.min(frameDelta, MAX_PHYSICS_DELTA);
+
   if (!gameOver) {
-    Engine.update(engine, delta * PHYSICS_SPEED);
-    checkGameOver();
-    checkProximityMerges();
+    physicsAccumulator += frameDelta;
+
+    while (physicsAccumulator >= FIXED_PHYSICS_STEP) {
+      Engine.update(engine, FIXED_PHYSICS_STEP * PHYSICS_SPEED);
+      dampBallRotation();
+      checkGameOver();
+      checkProximityMerges();
+      physicsAccumulator -= FIXED_PHYSICS_STEP;
+    }
   }
 
   renderFrame();
