@@ -1381,6 +1381,7 @@ async function init() {
 
   // 모바일 전용: 설정 버튼을 상단 정보바 오른쪽으로 이동
   setupMobileHeaderOptions();
+  setupPcTitleAndCredit();
 
   // 닉네임 없으면 모달
   if (!nickname) { showNicknameModal(); }
@@ -1452,6 +1453,38 @@ function updateSoundButtons() {
   if (mobBtn) {
     mobBtn.textContent = isOn ? '🔊 ON' : '🔇 OFF';
     mobBtn.className   = isOn ? 'sound-toggle on' : 'sound-toggle off';
+  }
+}
+
+
+// PC 전용: 타이틀을 중앙으로 보정하고, @kimazang 크레딧을 게임판 오른쪽 아래로 이동한다.
+// 모바일에서는 CSS에서 숨김 처리되므로 모바일 UI에는 영향 없음.
+function setupPcTitleAndCredit() {
+  const pageWrap = document.querySelector('.page-wrap');
+  const canvasWrap = document.getElementById('canvas-wrap') || document.querySelector('.canvas-wrap');
+
+  let title = document.querySelector('.pc-title');
+  if (!title) {
+    title = document.createElement('div');
+    title.className = 'pc-title';
+    if (pageWrap && pageWrap.parentElement) {
+      pageWrap.parentElement.insertBefore(title, pageWrap);
+    } else {
+      document.body.insertBefore(title, document.body.firstChild);
+    }
+  }
+  title.textContent = '👄 1991 만들기';
+
+  let credit = document.querySelector('.credit') || document.querySelector('.kimazang-credit');
+  if (!credit) {
+    credit = document.createElement('div');
+    credit.className = 'credit';
+    credit.textContent = '@kimazang';
+  }
+  credit.textContent = '@kimazang';
+
+  if (canvasWrap && credit.parentElement !== canvasWrap) {
+    canvasWrap.appendChild(credit);
   }
 }
 
