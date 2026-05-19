@@ -713,9 +713,33 @@ function renderFrame() {
 
     ctx.save();
     ctx.translate(x, y);
-    // 캐릭터/과일 이미지가 계속 빙글빙글 도는 느낌을 줄이기 위해 렌더링 회전은 제거한다.
-    // 물리 충돌체는 원형이라 이미지 회전을 빼도 충돌/합체 판정에는 영향이 없다.
-    // ctx.rotate(body.angle);
+
+    // 시각 회전 제한:
+    // 실제 물리 회전값을 그대로 보여주면 모바일에서 알 그림이 과하게 빙글빙글 돌아 보일 수 있다.
+    // 그래서 물리 충돌은 그대로 두고, 화면에 보이는 이미지 회전만 약 20도 안에서 살짝 움직이게 보정한다.
+    if (body.gameData) {
+      const maxVisualSpin = 0.35; // 약 20도
+      const spinInfluence = 0.12;
+
+      if (typeof body.gameData.visualAngle !== 'number') {
+        body.gameData.visualAngle = 0;
+      }
+
+      // 실제 각속도에 조금만 반응해서 생동감은 남긴다.
+      body.gameData.visualAngle += body.angularVelocity * spinInfluence;
+
+      // 한 바퀴씩 빙글빙글 돌지 않도록 시각 회전 범위를 제한한다.
+      if (body.gameData.visualAngle > maxVisualSpin) {
+        body.gameData.visualAngle = maxVisualSpin;
+      } else if (body.gameData.visualAngle < -maxVisualSpin) {
+        body.gameData.visualAngle = -maxVisualSpin;
+      }
+
+      // 멈춰 있을 때는 천천히 정면으로 돌아오게 해서 어색하게 기울어진 채로 붙어 있지 않게 한다.
+      body.gameData.visualAngle *= 0.96;
+
+      ctx.rotate(body.gameData.visualAngle);
+    }
 
     const canDrawImage =
       img &&
