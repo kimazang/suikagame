@@ -1265,8 +1265,6 @@ function initInput() {
   });
 }
 
-
-
 // ====================================================
 // 모바일 UI v3 — 상단바/제작법/랭킹 버튼 정리
 // ====================================================
@@ -1458,33 +1456,56 @@ function updateSoundButtons() {
 
 
 // PC 전용: 타이틀을 중앙으로 보정하고, @kimazang 크레딧을 게임판 오른쪽 아래로 이동한다.
+// 기존 HTML에 이미 있는 .game-title을 재사용해서 왼쪽 위 중복 타이틀이 남지 않게 한다.
 // 모바일에서는 CSS에서 숨김 처리되므로 모바일 UI에는 영향 없음.
 function setupPcTitleAndCredit() {
   const pageWrap = document.querySelector('.page-wrap');
   const canvasWrap = document.getElementById('canvas-wrap') || document.querySelector('.canvas-wrap');
+  const titleParent = pageWrap && pageWrap.parentElement ? pageWrap.parentElement : document.body;
 
-  let title = document.querySelector('.pc-title');
+  // 기존 타이틀 후보를 먼저 잡는다. 없을 때만 새로 만든다.
+  let title =
+    document.querySelector('.pc-title') ||
+    document.querySelector('.game-title') ||
+    document.getElementById('game-title');
+
   if (!title) {
     title = document.createElement('div');
-    title.className = 'pc-title';
-    if (pageWrap && pageWrap.parentElement) {
-      pageWrap.parentElement.insertBefore(title, pageWrap);
-    } else {
-      document.body.insertBefore(title, document.body.firstChild);
-    }
   }
+
+  title.classList.add('pc-title');
   title.textContent = '👄 1991 만들기';
 
-  let credit = document.querySelector('.credit') || document.querySelector('.kimazang-credit');
+  if (pageWrap && title.nextElementSibling !== pageWrap) {
+    titleParent.insertBefore(title, pageWrap);
+  }
+
+  // 혹시 이전 패치로 타이틀이 여러 개 생겼다면, 대표 타이틀만 남긴다.
+  document.querySelectorAll('.game-title, .pc-title').forEach(el => {
+    if (el !== title && el.textContent.includes('1991')) {
+      el.style.display = 'none';
+      el.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  // 크레딧도 하나만 남기고 게임판 안쪽 오른쪽 아래로 이동한다.
+  const credits = Array.from(document.querySelectorAll('.credit, .kimazang-credit'));
+  let credit = credits[0];
   if (!credit) {
     credit = document.createElement('div');
     credit.className = 'credit';
-    credit.textContent = '@kimazang';
   }
+
+  credit.classList.add('credit');
   credit.textContent = '@kimazang';
 
-  if (canvasWrap && credit.parentElement !== canvasWrap) {
-    canvasWrap.appendChild(credit);
+  credits.slice(1).forEach(el => el.remove());
+
+  // canvas-wrap은 overflow:hidden이라 안에 넣으면 잘림 → center-panel에 배치
+  const centerPanel = document.querySelector('.center-panel');
+  const creditParent = centerPanel || document.body;
+  if (credit.parentElement !== creditParent) {
+    creditParent.appendChild(credit);
   }
 }
 
