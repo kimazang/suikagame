@@ -1296,11 +1296,23 @@ function setupMobileLayoutV3() {
     rightGroup.className = 'mob-right-group';
   }
 
-  // 모바일 상단바 순서 고정: 점수 / 1991👄 / 내 기록 / 오른쪽 묶음
-  [scoreGroup, wmGroup, bestGroup].forEach(el => {
-    if (el && el.parentElement !== infoBar) infoBar.appendChild(el);
-  });
-  if (rightGroup.parentElement !== infoBar) infoBar.appendChild(rightGroup);
+  // 모바일 상단바 순서 고정:
+// 점수(현재) / 1991갯수(현재) / 내 기록(역대) / 오른쪽 묶음
+[scoreGroup, wmGroup, bestGroup].forEach((el, index) => {
+  if (!el) return;
+
+  el.style.order = String(index + 1);
+
+  if (el.parentElement !== infoBar) {
+    infoBar.appendChild(el);
+  }
+});
+
+rightGroup.style.order = '4';
+
+if (rightGroup.parentElement !== infoBar) {
+  infoBar.appendChild(rightGroup);
+}
 
   if (nextGroup && nextGroup.parentElement !== rightGroup) rightGroup.appendChild(nextGroup);
   if (soundBtn && soundBtn.parentElement !== rightGroup) rightGroup.appendChild(soundBtn);
