@@ -1080,6 +1080,56 @@ function renderRanking(data, myRankData = null) {
   updateMobileRankingButton(data && data.length ? data[0] : null);
 }
 
+
+async function loadFullRanking() {
+  const list = document.getElementById('full-ranking-list');
+  if (!list) return;
+
+  if (!firebaseEnabled || !db) {
+    list.innerHTML = '<div class="full-ranking-empty">랭킹을 불러올 수 없어요.</div>';
+    return;
+  }
+
+  list.innerHTML = '<div class="full-ranking-loading">TOP 50 불러오는 중...</div>';
+
+  try {
+    const q = query(collection(db, 'scores'), orderBy('score', 'desc'), limit(50));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      list.innerHTML = '<div class="full-ranking-empty">아직 랭킹 기록이 없어요.</div>';
+      return;
+    }
+
+    const data = [];
+    snap.forEach(d => data.push(d.data()));
+    data.sort((a, b) => (b.score || 0) - (a.score || 0) || (b.watermelonCount || 0) - (a.watermelonCount || 0));
+
+    list.innerHTML = data.map((item, i) => `
+      <div class="full-ranking-row ${item.playerId === playerId ? 'my-rank' : ''}">
+        <span class="full-rank-num">${i + 1}</span>
+        <span class="full-rank-nick">${escHtml(item.nickname || '-')}</span>
+        <span class="full-rank-score">${Number(item.score || 0).toLocaleString()}P</span>
+        <span class="full-rank-wm">👄${item.watermelonCount || 0}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.warn('[큐플] TOP 50 랭킹 불러오기 실패:', e);
+    list.innerHTML = '<div class="full-ranking-error">랭킹을 불러오지 못했어요. 잠시 후 다시 눌러주세요.</div>';
+  }
+}
+
+function showFullRanking() {
+  const el = document.getElementById('full-ranking-panel');
+  if (el) el.classList.remove('hidden');
+  loadFullRanking();
+}
+
+function hideFullRanking() {
+  const el = document.getElementById('full-ranking-panel');
+  if (el) el.classList.add('hidden');
+}
+
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -1415,6 +1465,9 @@ async function init() {
   bind('go-nickname-btn',   'click', () => { hideGameoverModal(); showNicknameModal(); });
   bind('mob-ranking-btn',   'click', showMobileRanking);
   bind('mob-ranking-close', 'click', hideMobileRanking);
+  bind('pc-ranking-more-btn',  'click', showFullRanking);
+  bind('mob-ranking-more-btn', 'click', showFullRanking);
+  bind('full-ranking-close',   'click', hideFullRanking);
   bind('mob-change-nick-btn',  'click', () => { hideMobOptions(); showNicknameModal(); });
   bind('change-nickname-btn',  'click', showNicknameModal);
   bind('sound-toggle-btn',     'click', toggleSound);
