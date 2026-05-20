@@ -213,7 +213,12 @@ body {
 }
 
 .score-item {
-  padding: 5px 0;
+  padding: 5.5px 0;
+}
+
+.score-divider {
+  height: 1px;
+  background: var(--border);
 }
 
 .score-label {
@@ -223,9 +228,9 @@ body {
 }
 
 .score-val {
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 900;
-  line-height: 1.05;
+  line-height: 1.08;
   color: var(--text);
 }
 
