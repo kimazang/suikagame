@@ -377,7 +377,7 @@ function createBall(x, y, level) {
     restitution:    0,
     // 자연스러운 굴림 유지형: 너무 미끄럽지도, 너무 빙글거리지도 않게 중간값으로 조정한다.
     friction:       0.75,
-    frictionStatic: 0.45,
+    frictionStatic: 0.25,
     frictionAir:    0.015,
     slop:           0.02,
     label:          'ball',
