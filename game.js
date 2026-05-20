@@ -42,7 +42,7 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
 // 전체 물리 속도 보정
 // 1.00 = 기존 속도, 1.15 = 15% 빠르게, 1.25 = 25% 빠르게
-const PHYSICS_SPEED = 1.2;
+const PHYSICS_SPEED = 1.0;
 const MAX_PHYSICS_DELTA = 100; // 프레임 급락 시 누적 물리 튐 방지용 상한 ms
 const FIXED_PHYSICS_STEP = 1000 / 60; // PC/모바일 공통 고정 물리 스텝
 
@@ -337,7 +337,7 @@ let engine, world;
 function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
-  engine.gravity.y = 2.0;
+  engine.gravity.y = 1.5;
 engine.positionIterations = 8;
 engine.velocityIterations = 6;
 
