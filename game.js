@@ -80,6 +80,45 @@ const LS = {
   BEST_WATERMELON: 'qplay_suika_best_watermelon_count',
 };
 
+// 랭킹 탭 상태
+// total = 전체 최고점 랭킹 / today = 오늘 플레이 랭킹
+let currentRankingMode = 'total';
+let rankingLoadSeq = 0; // 탭 빠른 전환 시 오래된 랭킹 요청 결과 무시용
+
+function isBetterRankingItem(item, target) {
+  const itemScore = Number(item?.score || 0);
+  const targetScore = Number(target?.score || 0);
+  if (itemScore !== targetScore) return itemScore > targetScore;
+
+  const itemWm = Number(item?.watermelonCount || 0);
+  const targetWm = Number(target?.watermelonCount || 0);
+  if (itemWm !== targetWm) return itemWm > targetWm;
+
+  // 점수와 1991 개수가 완전히 같으면 같은 순위로 취급한다.
+  return false;
+}
+
+function sortRankingItems(a, b) {
+  return (Number(b.score || 0) - Number(a.score || 0)) ||
+         (Number(b.watermelonCount || 0) - Number(a.watermelonCount || 0));
+}
+
+// 오늘 랭킹용 날짜 키
+// 한국 시간 기준으로 날짜가 넘어가도록 고정한다.
+function getTodayKey() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const y = parts.find(p => p.type === 'year')?.value;
+  const m = parts.find(p => p.type === 'month')?.value;
+  const d = parts.find(p => p.type === 'day')?.value;
+  return `${y}-${m}-${d}`;
+}
+
 // 폴백 색상 (이미지 실패 시)
 const FALLBACK_COLORS = [
   '#5bc0eb','#2299dd','#44bb99','#f5a623','#e85d4a',
@@ -703,8 +742,9 @@ function renderFrame() {
   }
 
   // 공 렌더링
-  Composite.allBodies(world).forEach(body => {
-    if (body.label !== 'ball' || !body.gameData) return;
+  // activeBodies에는 실제 공만 들어 있으므로 매 프레임 Composite.allBodies(world)를 훑지 않는다.
+  activeBodies.forEach(body => {
+    if (!body || !body.gameData) return;
 
     const { level } = body.gameData;
     const radius = BALL_RADII[level - 1];
@@ -864,8 +904,17 @@ async function endGame() {
     showGameoverModal(scoreUpdated, wmUpdated);
   }, 1400);
 
-  if (firebaseEnabled && nickname && (scoreUpdated || wmUpdated)) {
-    await saveToFirebase();
+  if (firebaseEnabled && nickname) {
+    // Today 랭킹은 "오늘 플레이한 기록"이므로 최고기록 갱신 여부와 상관없이 저장한다.
+    // 단, 완전 0점 기록은 랭킹에 올릴 필요가 없으므로 제외한다.
+    await saveDailyToFirebase();
+
+    // Total 랭킹은 기존 방식 그대로, 최고기록 또는 1991 개수가 갱신됐을 때만 저장한다.
+    if (scoreUpdated || wmUpdated) {
+      await saveToFirebase();
+    } else {
+      await loadRanking();
+    }
   }
 }
 
@@ -980,17 +1029,73 @@ async function saveToFirebase() {
 }
 
 // ====================================================
+// Firebase 오늘 랭킹 저장
+// ====================================================
+function getDailyCollectionName(dateKey = getTodayKey()) {
+  return `dailyScores_${dateKey}`;
+}
+
+async function saveDailyToFirebase() {
+  if (!firebaseEnabled || !db || !playerId || !nickname) return;
+  if (score <= 0 && watermelonCount <= 0) return;
+
+  try {
+    const dateKey = getTodayKey();
+    const docRef = doc(db, getDailyCollectionName(dateKey), playerId);
+    const snapshot = await getDoc(docRef);
+
+    // 오늘 기록도 플레이어별 1문서로 관리한다.
+    // 같은 날 여러 번 플레이하면 그날의 최고 점수/최대 1991 개수만 유지한다.
+    const prev = snapshot.exists() ? snapshot.data() : {};
+    const newScore = Math.max(score, prev.score || 0);
+    const newWm = Math.max(watermelonCount, prev.watermelonCount || 0);
+
+    // 오늘 기록도 실제 갱신된 값이 없으면 저장하지 않는다.
+    // 매 게임오버마다 불필요한 Firestore write가 발생하는 것을 줄인다.
+    if (newScore === (prev.score || 0) && newWm === (prev.watermelonCount || 0)) return;
+
+    await setDoc(docRef, {
+      dateKey,
+      playerId,
+      nickname,
+      score: newScore,
+      watermelonCount: newWm,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (e) {
+    console.warn('[큐플] 오늘 랭킹 저장 실패:', e);
+  }
+}
+
+// ====================================================
 // Firebase 랭킹
 // ====================================================
 async function loadRanking(myLatestData = null) {
   if (!firebaseEnabled || !db) { showEmptyRanking(); return; }
+
+  // 탭을 빠르게 전환할 때 이전 요청 결과가 나중에 도착해서 화면을 덮어쓰지 않게 한다.
+  const seq = ++rankingLoadSeq;
+
+  if (currentRankingMode === 'today') {
+    await loadTodayRanking(seq);
+    return;
+  }
+
+  await loadTotalRanking(myLatestData, seq);
+}
+
+async function loadTotalRanking(myLatestData = null, seq = ++rankingLoadSeq) {
+  if (!firebaseEnabled || !db) { showEmptyRanking(); return; }
+
   try {
     const q    = query(collection(db, 'scores'), orderBy('score', 'desc'), limit(10));
     const snap = await getDocs(q);
+    if (seq !== rankingLoadSeq) return;
     if (snap.empty) { showEmptyRanking(); return; }
+
     const top10 = [];
     snap.forEach(d => top10.push(d.data()));
-    top10.sort((a, b) => b.score - a.score || b.watermelonCount - a.watermelonCount);
+    top10.sort(sortRankingItems);
 
     // 내가 TOP 10 안에 있는지 확인
     const inTop10 = top10.some(d => d.playerId === playerId);
@@ -1003,6 +1108,7 @@ async function loadRanking(myLatestData = null) {
         const mySnap = await getDoc(doc(db, 'scores', playerId));
         return mySnap.exists() ? mySnap.data() : null;
       })();
+      if (seq !== rankingLoadSeq) return;
 
       if (myData) {
         const aboveQ  = query(
@@ -1011,24 +1117,135 @@ async function loadRanking(myLatestData = null) {
           limit(500)
         );
         const allSnap = await getDocs(aboveQ);
+        if (seq !== rankingLoadSeq) return;
+
         let rank = 1;
         allSnap.forEach(d => {
           const dd = d.data();
-          if (dd.playerId !== playerId && dd.score > myData.score) rank++;
+          if (dd.playerId !== playerId && isBetterRankingItem(dd, myData)) rank++;
         });
         myRankData = { ...myData, rank };
       }
     }
 
+    if (seq !== rankingLoadSeq) return;
     renderRanking(top10, myRankData);
   } catch (e) {
-    console.warn('[큐플] 랭킹 불러오기 실패:', e);
+    if (seq !== rankingLoadSeq) return;
+    console.warn('[큐플] 전체 랭킹 불러오기 실패:', e);
     showEmptyRanking();
   }
 }
 
+async function loadTodayRanking(seq = ++rankingLoadSeq) {
+  if (!firebaseEnabled || !db) { showEmptyRanking(); return; }
+
+  try {
+    const todayKey = getTodayKey();
+    const todayCollection = getDailyCollectionName(todayKey);
+
+    const q = query(
+      collection(db, todayCollection),
+      orderBy('score', 'desc'),
+      limit(10)
+    );
+    const snap = await getDocs(q);
+    if (seq !== rankingLoadSeq) return;
+
+    if (snap.empty) { showEmptyRanking(); return; }
+
+    const top10 = [];
+    snap.forEach(d => top10.push(d.data()));
+    top10.sort(sortRankingItems);
+
+    const inTop10 = top10.some(d => d.playerId === playerId);
+
+    let myRankData = null;
+    if (!inTop10 && playerId) {
+      const mySnap = await getDoc(doc(db, todayCollection, playerId));
+      if (seq !== rankingLoadSeq) return;
+      const myData = mySnap.exists() ? mySnap.data() : null;
+
+      if (myData) {
+        const rankQ = query(
+          collection(db, todayCollection),
+          orderBy('score', 'desc'),
+          limit(500)
+        );
+        const rankSnap = await getDocs(rankQ);
+        if (seq !== rankingLoadSeq) return;
+
+        let rank = 1;
+        rankSnap.forEach(d => {
+          const dd = d.data();
+          if (dd.playerId !== playerId && isBetterRankingItem(dd, myData)) rank++;
+        });
+        myRankData = { ...myData, rank };
+      }
+    }
+
+    if (seq !== rankingLoadSeq) return;
+    renderRanking(top10, myRankData);
+  } catch (e) {
+    if (seq !== rankingLoadSeq) return;
+    console.warn('[큐플] 오늘 랭킹 불러오기 실패:', e);
+    showEmptyRanking();
+  }
+}
+
+
+// ====================================================
+// 랭킹 탭 UI
+// ====================================================
+function ensureRankingTabs() {
+  ensureOneRankingTab('ranking-tabs', 'ranking-list');
+  ensureOneRankingTab('mobile-ranking-tabs', 'mobile-ranking-list');
+  updateRankingTabs();
+}
+
+function ensureOneRankingTab(tabId, listId) {
+  const list = document.getElementById(listId);
+  if (!list || document.getElementById(tabId)) return;
+
+  const tabs = document.createElement('div');
+  tabs.id = tabId;
+  tabs.className = 'ranking-tabs';
+  tabs.style.cssText = 'display:flex;gap:6px;margin:0 0 10px;';
+
+  tabs.innerHTML = `
+    <button type="button" class="ranking-tab-btn" data-rank-mode="today"
+      style="flex:1;border:0;border-radius:999px;padding:8px 10px;font-weight:800;cursor:pointer;">Today</button>
+    <button type="button" class="ranking-tab-btn" data-rank-mode="total"
+      style="flex:1;border:0;border-radius:999px;padding:8px 10px;font-weight:800;cursor:pointer;">Total</button>
+  `;
+
+  list.parentElement.insertBefore(tabs, list);
+
+  tabs.querySelectorAll('[data-rank-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.rankMode;
+      if (!mode || currentRankingMode === mode) return;
+      currentRankingMode = mode;
+      updateRankingTabs();
+      loadRanking();
+    });
+  });
+}
+
+function updateRankingTabs() {
+  document.querySelectorAll('[data-rank-mode]').forEach(btn => {
+    const active = btn.dataset.rankMode === currentRankingMode;
+    btn.classList.toggle('active', active);
+    btn.style.background = active ? '#2563eb' : '#eef5ff';
+    btn.style.color = active ? '#ffffff' : '#42637d';
+    btn.style.boxShadow = active ? '0 4px 12px rgba(37,99,235,0.25)' : 'none';
+  });
+}
+
 // 빈 랭킹 슬롯 표시
 function showEmptyRanking() {
+  updateRankingTabs();
+
   const rows = Array.from({ length: 10 }, (_, i) => `
     <div class="rank-row">
       <span class="rank-num">${i + 1}</span>
@@ -1044,6 +1261,8 @@ function showEmptyRanking() {
 }
 
 function renderRanking(data, myRankData = null) {
+  updateRankingTabs();
+
   const rows = Array.from({ length: 10 }, (_, i) => {
     const item = data[i];
     const medalClass = i === 0 ? 'rank-1st' : i === 1 ? 'rank-2nd' : i === 2 ? 'rank-3rd' : '';
@@ -1470,6 +1689,7 @@ async function init() {
   // UI 보강: 기존 HTML/CSS는 최대한 유지하고, 누락된 버튼만 JS로 채운다.
   // 게임 엔진/물리에는 영향 없음.
   ensureMobileOptionsPanel();
+  ensureRankingTabs();
 
   // 버튼 바인딩
   bind('nickname-confirm-btn', 'click', confirmNickname);
