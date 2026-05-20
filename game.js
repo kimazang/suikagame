@@ -905,11 +905,11 @@ async function endGame() {
   }, 1400);
 
   if (firebaseEnabled && nickname) {
-    // Today 랭킹은 "오늘 플레이한 기록"이므로 최고기록 갱신 여부와 상관없이 저장한다.
+    // Today 랭킹은 "오늘 플레이한 기록"이므로 최고기록 경신 여부와 상관없이 저장한다.
     // 단, 완전 0점 기록은 랭킹에 올릴 필요가 없으므로 제외한다.
     await saveDailyToFirebase();
 
-    // Total 랭킹은 기존 방식 그대로, 최고기록 또는 1991 개수가 갱신됐을 때만 저장한다.
+    // Total 랭킹은 기존 방식 그대로, 최고기록 또는 1991 개수가 경신됐을 때만 저장한다.
     if (scoreUpdated || wmUpdated) {
       await saveToFirebase();
     } else {
@@ -1008,7 +1008,7 @@ async function saveToFirebase() {
     const newScore = Math.max(score, prev.score || 0);
     const newWm    = Math.max(watermelonCount, prev.watermelonCount || 0);
 
-    // 실제로 갱신된 값이 없으면 저장 안 함
+    // 실제로 경신된 값이 없으면 저장 안 함
     if (newScore === (prev.score || 0) && newWm === (prev.watermelonCount || 0)) return;
 
     await setDoc(docRef, {
@@ -1050,7 +1050,7 @@ async function saveDailyToFirebase() {
     const newScore = Math.max(score, prev.score || 0);
     const newWm = Math.max(watermelonCount, prev.watermelonCount || 0);
 
-    // 오늘 기록도 실제 갱신된 값이 없으면 저장하지 않는다.
+    // 오늘 기록도 실제 경신된 값이 없으면 저장하지 않는다.
     // 매 게임오버마다 불필요한 Firestore write가 발생하는 것을 줄인다.
     if (newScore === (prev.score || 0) && newWm === (prev.watermelonCount || 0)) return;
 
@@ -1272,7 +1272,7 @@ function renderRanking(data, myRankData = null) {
           <span class="rank-num">${i + 1}</span>
           <span class="rank-nick">${escHtml(item.nickname)}</span>
           <span class="rank-score">${(item.score||0).toLocaleString()}P</span>
-          <span class="rank-wm">🫦${item.watermelonCount||0}</span>
+          <span class="rank-wm">👄${item.watermelonCount||0}</span>
         </div>`;
     } else {
       return `
@@ -1450,8 +1450,8 @@ function showGameoverModal(scoreUpdated, wmUpdated) {
   setText('go-best-wm', bwm + '개');
 
   let msg = '아쉽지만 최고 기록에는 도달하지 못했어요.';
-  if (scoreUpdated)   msg = '🎉 최고 기록 갱신! 랭킹에 반영됐어요.';
-  else if (wmUpdated) msg = '🫦 1991 기록 갱신! 더 많이 만들었어요.';
+  if (scoreUpdated)   msg = '🎉 최고 기록 경신! 랭킹에 반영됐어요.';
+  else if (wmUpdated) msg = '👄 1991 기록 경신! 더 많이 만들었어요.';
   setText('go-message', msg);
 
   document.getElementById('gameover-modal').classList.remove('hidden');
