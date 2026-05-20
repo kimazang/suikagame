@@ -82,7 +82,7 @@ const LS = {
 
 // 랭킹 탭 상태
 // total = 전체 최고점 랭킹 / today = 오늘 플레이 랭킹
-let currentRankingMode = 'total';
+let currentRankingMode = 'today';
 let rankingLoadSeq = 0; // 탭 빠른 전환 시 오래된 랭킹 요청 결과 무시용
 
 function isBetterRankingItem(item, target) {
