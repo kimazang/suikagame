@@ -1888,9 +1888,6 @@ function setupPcTitleAndCredit() {
   title.classList.add('pc-title');
   title.textContent = '👄 1991 만들기';
 
-  if (pageWrap && title.nextElementSibling !== pageWrap) {
-    titleParent.insertBefore(title, pageWrap);
-  }
 
   // 혹시 이전 패치로 타이틀이 여러 개 생겼다면, 대표 타이틀만 남긴다.
   document.querySelectorAll('.game-title, .pc-title').forEach(el => {
