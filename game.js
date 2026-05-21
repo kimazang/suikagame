@@ -374,7 +374,7 @@ function randomDropLevel() {
 function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-    restitution:    0.2,
+    restitution:    0,
     // 자연스러운 굴림 유지형: 너무 미끄럽지도, 너무 빙글거리지도 않게 중간값으로 조정한다.
     friction:       0.4,
     frictionStatic: 0.2,
