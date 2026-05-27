@@ -1,6 +1,6 @@
 /**
  * 1991 만들기 — game.js
- * - 물리: Matter.js (고정 타임스텝, 회전 감쇠, 이미지 회전 제거)
+ * - 물리: Matter.js (delta 기반 물리 업데이)
  * - 점수: 레퍼런스 삼각수 기준 [1,3,6,10,15,21,28,36,45,55,66]
  * - 공 크기: 레퍼런스 지름 기준 환산
  * - 드롭: 1~5단계 균등 랜덤, 쿨다운 600ms
@@ -938,10 +938,13 @@ function restartGame() {
   updateNextPreview();
   buildEvoRing(currentLv);
 
-  // 게임루프 재시작
-  lastFrameTime = performance.now();
-  animFrameId = requestAnimationFrame(gameLoop);
+// 게임루프 재시작
+if (animFrameId) {
+  cancelAnimationFrame(animFrameId);
+  animFrameId = null;
 }
+lastFrameTime = performance.now();
+animFrameId = requestAnimationFrame(gameLoop);
 
 // ====================================================
 // 메인 게임 루프
