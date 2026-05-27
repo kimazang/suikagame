@@ -945,6 +945,7 @@ if (animFrameId) {
 }
 lastFrameTime = performance.now();
 animFrameId = requestAnimationFrame(gameLoop);
+}
 
 // ====================================================
 // 메인 게임 루프
