@@ -42,9 +42,8 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
 // 전체 물리 속도 보정
 // 1.00 = 기존 속도, 1.15 = 15% 빠르게, 1.25 = 25% 빠르게
-const PHYSICS_SPEED = 1.0;
-const MAX_PHYSICS_DELTA = 50; // 옛날 초기버전 수치로 롤백: 모바일 렉/프레임 저하 시 튐 방지용 상한 ms
-const FIXED_PHYSICS_STEP = 1000 / 60; // PC/모바일 공통 고정 물리 스텝
+const PHYSICS_SPEED = 1.7;
+const MAX_PHYSICS_DELTA = 50; // 모바일 렉/프레임 저하 시 튐 방지용 상한 ms
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
@@ -337,9 +336,10 @@ let engine, world;
 function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
-  engine.gravity.y = 2.0;
-engine.positionIterations = 8;
-engine.velocityIterations = 6;
+  engine.gravity.y = 1.0; // 레퍼런스 Phaser gravity.y=1.5 체감 환산값
+  // 공끼리 겹쳐 보이는 현상을 줄이기 위해 물리 보정 반복 횟수를 올린다.
+  // 이미지 크기를 키우는 방식은 겹침을 더 심하게 만들 수 있어서 사용하지 않는다.
+  // 레퍼런스 기본값 유지 (positionIterations:6, velocityIterations:4)
 
   const opt = { isStatic: true, friction: 1, restitution: 0, frictionStatic: 0.5, label: 'wall' };
   World.add(world, [
@@ -375,12 +375,11 @@ function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
     restitution:    0,
-    // 옛날 초기버전 물리 수치로 롤백
     friction:       1,
     frictionStatic: 0.5,
     frictionAir:    0.01,
     angularDamping: 0.95,
-    slop:           0.02,
+    slop:           0.01,
     label:          'ball',
   });
 
@@ -939,10 +938,8 @@ function restartGame() {
   updateNextPreview();
   buildEvoRing(currentLv);
 
-  // 게임루프 재시작 (이전 루프가 살아있으면 먼저 취소)
-  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+  // 게임루프 재시작
   lastFrameTime = performance.now();
-  physicsAccumulator = 0;
   animFrameId = requestAnimationFrame(gameLoop);
 }
 
@@ -950,41 +947,17 @@ function restartGame() {
 // 메인 게임 루프
 // ====================================================
 let lastFrameTime = performance.now();
-let physicsAccumulator = 0;
 let animFrameId = null; // 중복 루프 방지용
 
-// Matter.js 옵션에 의존하지 않고, 실제 각속도를 직접 감쇠한다.
-// 고정 타임스텝 안에서 호출하므로 PC/모바일 모두 같은 기준으로 회전이 줄어든다.
-function dampBallRotation() {
-  activeBodies.forEach(body => {
-    if (!body || !body.gameData) return;
-
-    // 너무 강하게 잡으면 공이 안 굴러가는 것처럼 보이므로 아주 약하게만 감쇠한다.
-    body.angularVelocity *= 0.95;
-
-    if (Math.abs(body.angularVelocity) < 0.003) {
-      Matter.Body.setAngularVelocity(body, 0);
-    }
-  });
-}
-
 function gameLoop(now = performance.now()) {
-  let frameDelta = now - lastFrameTime;
+  const rawDelta = now - lastFrameTime;
+  const delta = Math.min(rawDelta, MAX_PHYSICS_DELTA);
   lastFrameTime = now;
 
-  // 모바일/저사양 환경에서 프레임이 크게 튀어도 한 번에 과한 물리 계산이 들어가지 않게 제한한다.
-  frameDelta = Math.min(frameDelta, MAX_PHYSICS_DELTA);
-
   if (!gameOver) {
-    physicsAccumulator += frameDelta;
-
-    while (physicsAccumulator >= FIXED_PHYSICS_STEP) {
-      Engine.update(engine, FIXED_PHYSICS_STEP * PHYSICS_SPEED);
-      dampBallRotation();
-      checkGameOver();
-      checkProximityMerges();
-      physicsAccumulator -= FIXED_PHYSICS_STEP;
-    }
+    Engine.update(engine, delta * PHYSICS_SPEED);
+    checkGameOver();
+    checkProximityMerges();
   }
 
   renderFrame();
