@@ -43,7 +43,7 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 // 전체 물리 속도 보정
 // 1.00 = 기존 속도, 1.15 = 15% 빠르게, 1.25 = 25% 빠르게
 const PHYSICS_SPEED = 1.0;
-const MAX_PHYSICS_DELTA = 100; // 프레임 급락 시 누적 물리 튐 방지용 상한 ms
+const MAX_PHYSICS_DELTA = 50; // 옛날 초기버전 수치로 롤백: 모바일 렉/프레임 저하 시 튐 방지용 상한 ms
 const FIXED_PHYSICS_STEP = 1000 / 60; // PC/모바일 공통 고정 물리 스텝
 
 // 이미지 URL (여기서 수정)
@@ -337,7 +337,7 @@ let engine, world;
 function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
-  engine.gravity.y = 1.5;
+  engine.gravity.y = 2.0;
 engine.positionIterations = 8;
 engine.velocityIterations = 6;
 
@@ -375,10 +375,11 @@ function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
     restitution:    0,
-    // 자연스러운 굴림 유지형: 너무 미끄럽지도, 너무 빙글거리지도 않게 중간값으로 조정한다.
-    friction:       0.4,
-    frictionStatic: 0.2,
-    frictionAir:    0.008,
+    // 옛날 초기버전 물리 수치로 롤백
+    friction:       1,
+    frictionStatic: 0.5,
+    frictionAir:    0.01,
+    angularDamping: 0.95,
     slop:           0.02,
     label:          'ball',
   });
@@ -959,7 +960,7 @@ function dampBallRotation() {
     if (!body || !body.gameData) return;
 
     // 너무 강하게 잡으면 공이 안 굴러가는 것처럼 보이므로 아주 약하게만 감쇠한다.
-    body.angularVelocity *= 0.985;
+    body.angularVelocity *= 0.95;
 
     if (Math.abs(body.angularVelocity) < 0.003) {
       Matter.Body.setAngularVelocity(body, 0);
