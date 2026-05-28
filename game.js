@@ -42,8 +42,8 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 
 // 전체 물리 속도 보정
 // 1.00 = 기존 속도, 1.15 = 15% 빠르게, 1.25 = 25% 빠르게
-const PHYSICS_SPEED = 1.7;
-const MAX_PHYSICS_DELTA = 16; // 60fps 한 프레임치만
+const PHYSICS_SPEED = 1.0;
+const MAX_PHYSICS_DELTA = 50; // 60fps 한 프레임치만
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
@@ -336,11 +336,10 @@ let engine, world;
 function initPhysics() {
   engine = Engine.create();
   world  = engine.world;
-  engine.gravity.y = 1.0; // 레퍼런스 Phaser gravity.y=1.5 체감 환산값
-  // 공끼리 겹쳐 보이는 현상을 줄이기 위해 물리 보정 반복 횟수를 올린다.
-  // 이미지 크기를 키우는 방식은 겹침을 더 심하게 만들 수 있어서 사용하지 않는다.
-  // 레퍼런스 기본값 유지 (positionIterations:6, velocityIterations:4)
-
+  engine.gravity.y = 2.0;
+engine.positionIterations = 8;
+engine.velocityIterations = 6;
+         
   const opt = { isStatic: true, friction: 1, restitution: 0, frictionStatic: 0.5, label: 'wall' };
   World.add(world, [
     Bodies.rectangle(BOARD_WIDTH / 2, BOARD_HEIGHT + 25, BOARD_WIDTH + 100, 50, opt),
@@ -379,7 +378,7 @@ function createBall(x, y, level) {
     frictionStatic: 0.5,
     frictionAir:    0.01,
     angularDamping: 0.95,
-    slop:           0.01,
+    slop:           0.02,
     label:          'ball',
   });
 
@@ -959,11 +958,7 @@ function gameLoop(now = performance.now()) {
   lastFrameTime = now;
 
 if (!gameOver) {
-    const SUBSTEPS = 3;
-    const subDelta = (delta * PHYSICS_SPEED) / SUBSTEPS;
-    for (let i = 0; i < SUBSTEPS; i++) {
-      Engine.update(engine, subDelta);
-    }
+    Engine.update(engine, delta * PHYSICS_SPEED);
     checkGameOver();
     checkProximityMerges();
   }
