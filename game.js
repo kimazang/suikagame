@@ -43,7 +43,7 @@ const DROP_COOLDOWN = 600; // 드롭 후 쿨다운 ms
 // 전체 물리 속도 보정
 // 1.00 = 기존 속도, 1.15 = 15% 빠르게, 1.25 = 25% 빠르게
 const PHYSICS_SPEED = 1.7;
-const MAX_PHYSICS_DELTA = 50; // 모바일 렉/프레임 저하 시 튐 방지용 상한 ms
+const MAX_PHYSICS_DELTA = 16; // 60fps 한 프레임치만
 
 // 이미지 URL (여기서 수정)
 const BALL_IMAGES = [
@@ -958,8 +958,12 @@ function gameLoop(now = performance.now()) {
   const delta = Math.min(rawDelta, MAX_PHYSICS_DELTA);
   lastFrameTime = now;
 
-  if (!gameOver) {
-    Engine.update(engine, delta * PHYSICS_SPEED);
+if (!gameOver) {
+    const SUBSTEPS = 3;
+    const subDelta = (delta * PHYSICS_SPEED) / SUBSTEPS;
+    for (let i = 0; i < SUBSTEPS; i++) {
+      Engine.update(engine, subDelta);
+    }
     checkGameOver();
     checkProximityMerges();
   }
