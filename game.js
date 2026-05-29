@@ -910,11 +910,7 @@ async function endGame() {
     await saveDailyToFirebase();
 
     // Total 랭킹은 기존 방식 그대로, 최고기록 또는 1991 개수가 경신됐을 때만 저장한다.
-    if (scoreUpdated || wmUpdated) {
-      await saveToFirebase();
-    } else {
-      await loadRanking();
-    }
+await saveToFirebase();
   }
 }
 
