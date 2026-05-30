@@ -999,13 +999,15 @@ async function saveToFirebase() {
     const docRef   = doc(db, 'scores', playerId);
     const snapshot = await getDoc(docRef);
 
-    // 기존 데이터와 비교해서 더 높은 값만 저장 (덮어씌움 방지)
     const prev     = snapshot.exists() ? snapshot.data() : {};
-    const newScore = Math.max(score, prev.score || 0);
-    const newWm    = Math.max(watermelonCount, prev.watermelonCount || 0);
+    const prevScore = prev.score || 0;
+    const prevWm    = prev.watermelonCount || 0;
 
-    // 실제로 경신된 값이 없으면 저장 안 함
-    if (newScore === (prev.score || 0) && newWm === (prev.watermelonCount || 0)) return;
+    // Firebase 기준으로만 비교 (로컬캐시 무시)
+    if (score <= prevScore && watermelonCount <= prevWm) return;
+
+    const newScore = Math.max(score, prevScore);
+    const newWm    = Math.max(watermelonCount, prevWm);
 
     await setDoc(docRef, {
       playerId,
@@ -1015,7 +1017,6 @@ async function saveToFirebase() {
       updatedAt:       serverTimestamp(),
     }, { merge: true });
 
-    // 저장 후 내 최신 데이터를 바로 넘겨서 getDoc 중복 호출 방지
     const myLatest = { playerId, nickname, score: newScore, watermelonCount: newWm };
     await loadRanking(myLatest);
 
