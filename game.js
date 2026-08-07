@@ -374,11 +374,11 @@ function randomDropLevel() {
 function createBall(x, y, level) {
   const radius = BALL_RADII[level - 1];
   const body = Bodies.circle(x, y, radius, {
-    restitution:    0,
+    restitution:    0.10,
     // 자연스러운 굴림 유지형: 너무 미끄럽지도, 너무 빙글거리지도 않게 중간값으로 조정한다.
-    friction:       0.4,
-    frictionStatic: 0.2,
-    frictionAir:    0.008,
+    friction:       0.32,
+    frictionStatic: 0.15,
+    frictionAir:    0.007,
     slop:           0.02,
     label:          'ball',
   });
@@ -494,7 +494,7 @@ function checkProximityMerges() {
       const minD = BALL_RADII[lvA - 1] + BALL_RADII[lvB - 1];
 
       // 닿거나 약간 겹치면 합체 (tolerance 4px)
-      if (dist <= minD + 4) {
+      if (dist <= minD + 6) {
         processMergePair(a, b);
       }
     }
@@ -853,7 +853,7 @@ function checkGameOver() {
       const uid = body.gameData.uid;
       if (!dangerTimers.has(uid)) {
         dangerTimers.set(uid, now);
-      } else if (now - dangerTimers.get(uid) > 2000) {
+      } else if (now - dangerTimers.get(uid) > 2500) {
         endGame();
         return;
       }
