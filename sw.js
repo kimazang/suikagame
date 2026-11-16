@@ -1,47 +1,64 @@
-const CACHE = '1991-v1';
+const CACHE = '1991-speedrun-20261116-1';
+const localUrl = path => new URL(path, self.registration.scope).href;
+const INDEX_URL = localUrl('index.html');
+const MATTER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js';
 const ASSETS = [
-  '/suikagame/',
-  '/suikagame/index.html',
-  '/suikagame/style.css',
-  '/suikagame/game.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/1991_favicon.png',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika1.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika2.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika3.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika4.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika5.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika6.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika7.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika8.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika9.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika10.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika11.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/cloud.png?v=1991-9',
-];
+  'index.html', 'style.css?v=20260519-review2',
+  'speedrun.css?v=20261116-speedrun-1', 'game.js?v=20261116-speedrun-1',
+  'speedrun.js?v=20261116-speedrun-1', 'speedrun-core.js?v=20261116-speedrun-1',
+].map(localUrl);
 
-// 설치: 핵심 파일 캐시
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
 
-// 활성화: 이전 캐시 삭제
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key.startsWith('1991-') && key !== CACHE).map(key => caches.delete(key)));
+    await self.clients.claim();
+    // Do not reload somebody's active game. The next navigation gets fresh HTML.
+  })());
 });
 
-// 요청: 캐시 우선, 없으면 네트워크
-self.addEventListener('fetch', e => {
-  // Firebase / Firestore 요청은 캐시 안 함 (항상 최신 랭킹 필요)
-  if (e.request.url.includes('firestore') || e.request.url.includes('firebase')) return;
-
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  const url = new URL(request.url);
+  // In particular, do not intercept Auth/Firestore or other cross-origin APIs.
+  if (request.method !== 'GET') return;
+  const gameImage = request.destination === 'image'
+    && url.origin === 'https://raw.githubusercontent.com'
+    && url.pathname.startsWith('/kimazang/suikagame/main/');
+  if (gameImage || url.href === MATTER_URL) {
+    event.respondWith((async () => {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      const response = await fetch(request);
+      if (response.ok || response.type === 'opaque') {
+        const cache = await caches.open(CACHE);
+        await cache.put(request, response.clone());
+      }
+      return response;
+    })());
+    return;
+  }
+  if (url.origin !== self.location.origin) return;
+  if (request.mode === 'navigate') {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request);
+        if (response.ok) {
+          const cache = await caches.open(CACHE);
+          await cache.put(INDEX_URL, response.clone());
+        }
+        return response;
+      } catch (error) {
+        const cached = await caches.match(INDEX_URL);
+        if (cached) return cached;
+        throw error;
+      }
+    })());
+  } else if (ASSETS.includes(url.href)) {
+    event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
+  }
 });

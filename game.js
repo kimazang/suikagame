@@ -15,8 +15,10 @@
 import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, doc, setDoc, getDoc,
          collection, query, orderBy, limit,
-         getDocs, serverTimestamp }
+         getDocs, serverTimestamp, runTransaction }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+import { createSpeedrun } from './speedrun.js?v=20261116-speedrun-1';
 
 // ====================================================
 // [A] FIREBASE CONFIG — 여기에 입력하세요
@@ -83,7 +85,8 @@ const LS = {
 // 랭킹 탭 상태
 // total = 전체 최고점 랭킹 / today = 오늘 플레이 랭킹
 let currentRankingMode = 'today';
-let rankingLoadSeq = 0; // 탭 빠른 전환 시 오래된 랭킹 요청 결과 무시용
+let rankingLoadSeq = 0;
+let fullRankingLoadSeq = 0; // 탭 빠른 전환 시 오래된 랭킹 요청 결과 무시용
 
 function isBetterRankingItem(item, target) {
   const itemScore = Number(item?.score || 0);
@@ -168,6 +171,12 @@ let score = 0, bestScore = 0;
 let watermelonCount = 0, bestWatermelonCount = 0;
 let nickname = '', playerId = '';
 let gameOver = false, canDrop = true;
+let speedrun = null;
+let nextDropAt = 0;
+let roundSeq = 0;
+let gameoverModalTimer = null, shakeTimer = null;
+let normalSaveState = { roundId: 0, text: '' };
+let normalPauseStarted = null;
 let currentLv = 1, nextLv = 1;
 let dropX = BOARD_WIDTH / 2;
 let soundEnabled = true; // 효과음 on/off
@@ -401,8 +410,10 @@ function createBall(x, y, level) {
 // 공 드롭
 // ====================================================
 function dropBall() {
-  if (gameOver || !canDrop) return;
+  speedrun?.tick(performance.now());
+  if (!canAcceptDrop()) return;
   canDrop = false;
+  nextDropAt = performance.now() + DROP_COOLDOWN;
 
   const lv     = currentLv;
   const radius = BALL_RADII[lv - 1];
@@ -415,7 +426,7 @@ function dropBall() {
   nextLv    = randomDropLevel();
   updateNextPreview();
   buildEvoRing(currentLv);
-  setTimeout(() => { canDrop = true; }, DROP_COOLDOWN);
+  // The existing frame loop checks nextDropAt; no old-round timeout can unlock a new round.
 }
 
 // ====================================================
@@ -427,6 +438,7 @@ function onCollision(event) {
 }
 
 function processMergePair(a, b) {
+  if (gameOver) return;
   if (a.label !== 'ball' || b.label !== 'ball') return;
   if (!a.gameData || !b.gameData) return;
   if (a.gameData.isMerging || b.gameData.isMerging) return;
@@ -520,7 +532,7 @@ function explodeBalls(a, b) {
 
   // 점수 추가 (11단계 합체 점수)
   score += MERGE_SCORES[10];
-  if (score > bestScore) bestScore = score;
+  if (!speedrun?.isEventMode() && score > bestScore) bestScore = score;
 
   playMergeSound(11);
   addMergeEffect(mx, my, 11, true);
@@ -548,17 +560,19 @@ function mergeBalls(a, b, level) {
   const isWatermelon = newLevel === 11;
 
   score += MERGE_SCORES[level - 1];
-  if (score > bestScore) bestScore = score;
+  if (!speedrun?.isEventMode() && score > bestScore) bestScore = score;
 
   if (isWatermelon) {
     watermelonCount++;
-    if (watermelonCount > bestWatermelonCount) bestWatermelonCount = watermelonCount;
+    if (!speedrun?.isEventMode() && watermelonCount > bestWatermelonCount) bestWatermelonCount = watermelonCount;
   }
 
   playMergeSound(newLevel);
   addMergeEffect(mx, my, newLevel, isWatermelon);
   createBall(mx, my, newLevel);
   updateScoreUI();
+  // Freeze on the first 1991 before another pair in this physics step scores.
+  if (isWatermelon) speedrun?.complete();
 }
 
 // ====================================================
@@ -866,51 +880,50 @@ function checkGameOver() {
 // ====================================================
 // 게임 종료
 // ====================================================
+function captureRoundResult() {
+  return Object.freeze({
+    roundId: roundSeq, playerId, nickname, score, watermelonCount,
+    dateKey: getTodayKey(),
+    bestScore: Math.max(score, lsGetInt(LS.BEST_SCORE, 0)),
+    bestWatermelonCount: Math.max(watermelonCount, lsGetInt(LS.BEST_WATERMELON, 0)),
+  });
+}
+
 async function endGame() {
   if (gameOver) return;
+  if (speedrun?.isEventMode()) { speedrun.gameOver(); return; }
   gameOver = true;
+  canDrop = false;
 
   const wrap = document.getElementById('canvas-wrap');
   if (wrap) {
     wrap.classList.remove('shake-hard');
     void wrap.offsetWidth;
     wrap.classList.add('shake-hard');
-
-    setTimeout(() => {
-      wrap.classList.remove('shake-hard');
-    }, 1500);
+    shakeTimer = setTimeout(() => wrap.classList.remove('shake-hard'), 1500);
   }
 
-  const prevBest   = lsGetInt(LS.BEST_SCORE, 0);
+  const prevBest = lsGetInt(LS.BEST_SCORE, 0);
   const prevBestWm = lsGetInt(LS.BEST_WATERMELON, 0);
-  let scoreUpdated = false;
-  let wmUpdated    = false;
-
-  if (score > prevBest) {
-    lsSet(LS.BEST_SCORE, score);
-    bestScore = score;
-    scoreUpdated = true;
-  }
-
-  if (watermelonCount > prevBestWm) {
-    lsSet(LS.BEST_WATERMELON, watermelonCount);
-    bestWatermelonCount = watermelonCount;
-    wmUpdated = true;
-  }
-
+  const scoreUpdated = score > prevBest;
+  const wmUpdated = watermelonCount > prevBestWm;
+  if (scoreUpdated) { lsSet(LS.BEST_SCORE, score); bestScore = score; }
+  if (wmUpdated) { lsSet(LS.BEST_WATERMELON, watermelonCount); bestWatermelonCount = watermelonCount; }
+  const result = captureRoundResult();
+  normalSaveState = { roundId: result.roundId, text: firebaseEnabled ? '기록 저장 중…' : '이 기기에 기록했어요.' };
   updateScoreUI();
-
-  setTimeout(() => {
-    showGameoverModal(scoreUpdated, wmUpdated);
+  gameoverModalTimer = setTimeout(() => {
+    if (result.roundId === roundSeq && gameOver && !speedrun?.isEventMode()) {
+      showGameoverModal(scoreUpdated, wmUpdated, result);
+    }
   }, 1400);
-
-  if (firebaseEnabled && nickname) {
-    // Today 랭킹은 "오늘 플레이한 기록"이므로 최고기록 경신 여부와 상관없이 저장한다.
-    // 단, 완전 0점 기록은 랭킹에 올릴 필요가 없으므로 제외한다.
-    await saveDailyToFirebase();
-
-    // Total 랭킹은 기존 방식 그대로, 최고기록 또는 1991 개수가 경신됐을 때만 저장한다.
-await saveToFirebase();
+  if (firebaseEnabled && result.nickname) {
+    const outcomes = await Promise.all([saveDailyToFirebase(result), saveToFirebase(result)]);
+    if (result.roundId === roundSeq && gameOver && !speedrun?.isEventMode()) {
+      normalSaveState.text = outcomes.every(Boolean) ? '기록을 확인했어요.' : '랭킹 저장에 연결이 필요해요.';
+      setText('go-save-state', normalSaveState.text);
+      loadRanking();
+    }
   }
 }
 
@@ -918,6 +931,18 @@ await saveToFirebase();
 // 재시작
 // ====================================================
 function restartGame() {
+  if (speedrun?.isEventMode()) { speedrun.requestRestart(); return; }
+  resetGameBoard();
+}
+
+function resetGameBoard() {
+  roundSeq++;
+  clearTimeout(gameoverModalTimer); clearTimeout(shakeTimer);
+  gameoverModalTimer = null; shakeTimer = null;
+  document.getElementById('canvas-wrap')?.classList.remove('shake-hard');
+  normalSaveState = { roundId: roundSeq, text: '' };
+  normalPauseStarted = null;
+  nextDropAt = 0;
   gameOver = false; canDrop = true;
   score = 0; watermelonCount = 0;
   ballIdCnt = 0;
@@ -963,66 +988,66 @@ function dampBallRotation() {
   });
 }
 
+function freezeGameBoard() {
+  gameOver = true; canDrop = false;
+  if (animFrameId) cancelAnimationFrame(animFrameId);
+  animFrameId = null;
+  renderFrame();
+}
+
 function gameLoop(now = performance.now()) {
   let frameDelta = now - lastFrameTime;
   lastFrameTime = now;
-
-  // 모바일/저사양 환경에서 프레임이 크게 튀어도 한 번에 과한 물리 계산이 들어가지 않게 제한한다.
-  frameDelta = Math.min(frameDelta, MAX_PHYSICS_DELTA);
-
-  if (!gameOver) {
+  frameDelta = Math.max(0, Math.min(frameDelta, MAX_PHYSICS_DELTA));
+  speedrun?.tick(now);
+  const paused = Boolean(speedrun?.pausesBoard());
+  if (paused && !speedrun?.isEventMode()) {
+    normalPauseStarted ??= Date.now();
+  } else if (normalPauseStarted !== null) {
+    const duration = Math.max(0, Date.now() - normalPauseStarted);
+    activeBodies.forEach(body => { if (body.gameData) body.gameData.spawnTime += duration; });
+    dangerTimers.forEach((value, key) => dangerTimers.set(key, value + duration));
+    mergeEffects.forEach(effect => { effect.startTime += duration; });
+    normalPauseStarted = null;
+  }
+  if (!gameOver) canDrop = now >= nextDropAt;
+  if (!gameOver && !paused) {
     physicsAccumulator += frameDelta;
-
-    while (physicsAccumulator >= FIXED_PHYSICS_STEP) {
+    while (!gameOver && physicsAccumulator >= FIXED_PHYSICS_STEP) {
+      speedrun?.tick(performance.now());
+      if (gameOver) break;
       Engine.update(engine, FIXED_PHYSICS_STEP * PHYSICS_SPEED);
       dampBallRotation();
-      checkGameOver();
-      checkProximityMerges();
+      if (!gameOver) checkGameOver();
+      if (!gameOver) checkProximityMerges();
       physicsAccumulator -= FIXED_PHYSICS_STEP;
     }
   }
-
   renderFrame();
-
-  if (!gameOver) {
-    animFrameId = requestAnimationFrame(gameLoop);
-  }
+  if (!gameOver) animFrameId = requestAnimationFrame(gameLoop);
+  else animFrameId = null;
 }
 
 // ====================================================
 // Firebase 저장
 // ====================================================
-async function saveToFirebase() {
-  if (!firebaseEnabled || !db) return;
-
+async function saveToFirebase(result = captureRoundResult()) {
+  if (!firebaseEnabled || !db || !result.nickname) return true;
   try {
-    const docRef   = doc(db, 'scores', playerId);
-    const snapshot = await getDoc(docRef);
-
-    const prev     = snapshot.exists() ? snapshot.data() : {};
-    const prevScore = prev.score || 0;
-    const prevWm    = prev.watermelonCount || 0;
-
-    // Firebase 기준으로만 비교 (로컬캐시 무시)
-    if (score <= prevScore && watermelonCount <= prevWm) return;
-
-    const newScore = Math.max(score, prevScore);
-    const newWm    = Math.max(watermelonCount, prevWm);
-
-    await setDoc(docRef, {
-      playerId,
-      nickname,
-      score:           newScore,
-      watermelonCount: newWm,
-      updatedAt:       serverTimestamp(),
-    }, { merge: true });
-
-    const myLatest = { playerId, nickname, score: newScore, watermelonCount: newWm };
-    await loadRanking(myLatest);
-
-  } catch (e) {
-    console.warn('[큐플] Firebase 저장 실패:', e);
-  }
+    await runTransaction(db, async transaction => {
+      const ref = doc(db, 'scores', result.playerId);
+      const snapshot = await transaction.get(ref);
+      const prev = snapshot.exists() ? snapshot.data() : {};
+      if (result.score <= (prev.score || 0) && result.watermelonCount <= (prev.watermelonCount || 0)) return;
+      transaction.set(ref, {
+        playerId: result.playerId, nickname: result.nickname,
+        score: Math.max(result.score, prev.score || 0),
+        watermelonCount: Math.max(result.watermelonCount, prev.watermelonCount || 0),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    });
+    return true;
+  } catch (error) { console.warn('[큐플] Firebase 저장 실패:', error); return false; }
 }
 
 // ====================================================
@@ -1032,42 +1057,35 @@ function getDailyCollectionName(dateKey = getTodayKey()) {
   return `dailyScores_${dateKey}`;
 }
 
-async function saveDailyToFirebase() {
-  if (!firebaseEnabled || !db || !playerId || !nickname) return;
-  if (score <= 0 && watermelonCount <= 0) return;
-
+async function saveDailyToFirebase(result = captureRoundResult()) {
+  if (!firebaseEnabled || !db || !result.playerId || !result.nickname) return true;
+  if (result.score <= 0 && result.watermelonCount <= 0) return true;
   try {
-    const dateKey = getTodayKey();
-    const docRef = doc(db, getDailyCollectionName(dateKey), playerId);
-    const snapshot = await getDoc(docRef);
-
-    // 오늘 기록도 플레이어별 1문서로 관리한다.
-    // 같은 날 여러 번 플레이하면 그날의 최고 점수/최대 1991 개수만 유지한다.
-    const prev = snapshot.exists() ? snapshot.data() : {};
-    const newScore = Math.max(score, prev.score || 0);
-    const newWm = Math.max(watermelonCount, prev.watermelonCount || 0);
-
-    // 오늘 기록도 실제 경신된 값이 없으면 저장하지 않는다.
-    // 매 게임오버마다 불필요한 Firestore write가 발생하는 것을 줄인다.
-    if (newScore === (prev.score || 0) && newWm === (prev.watermelonCount || 0)) return;
-
-    await setDoc(docRef, {
-      dateKey,
-      playerId,
-      nickname,
-      score: newScore,
-      watermelonCount: newWm,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  } catch (e) {
-    console.warn('[큐플] 오늘 랭킹 저장 실패:', e);
-  }
+    await runTransaction(db, async transaction => {
+      const ref = doc(db, getDailyCollectionName(result.dateKey), result.playerId);
+      const snapshot = await transaction.get(ref);
+      const prev = snapshot.exists() ? snapshot.data() : {};
+      const newScore = Math.max(result.score, prev.score || 0);
+      const newWm = Math.max(result.watermelonCount, prev.watermelonCount || 0);
+      if (newScore === (prev.score || 0) && newWm === (prev.watermelonCount || 0)) return;
+      transaction.set(ref, {
+        dateKey: result.dateKey, playerId: result.playerId, nickname: result.nickname,
+        score: newScore, watermelonCount: newWm, updatedAt: serverTimestamp(),
+      }, { merge: true });
+    });
+    return true;
+  } catch (error) { console.warn('[큐플] 오늘 랭킹 저장 실패:', error); return false; }
 }
 
 // ====================================================
 // Firebase 랭킹
 // ====================================================
 async function loadRanking(myLatestData = null) {
+  if (currentRankingMode === 'event' && speedrun) {
+    rankingLoadSeq++;
+    updateRankingTabs();
+    return speedrun.loadRankingPanel();
+  }
   if (!firebaseEnabled || !db) { showEmptyRanking(); return; }
 
   // 탭을 빠르게 전환할 때 이전 요청 결과가 나중에 도착해서 화면을 덮어쓰지 않게 한다.
@@ -1221,7 +1239,7 @@ function ensureOneRankingTab(tabId, listId) {
   tabs.querySelectorAll('[data-rank-mode]').forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.rankMode;
-      if (!mode || currentRankingMode === mode) return;
+      if (!mode) return;
       currentRankingMode = mode;
       updateRankingTabs();
       loadRanking();
@@ -1300,6 +1318,11 @@ function renderRanking(data, myRankData = null) {
 
 
 async function loadFullRanking() {
+  const requestSeq = ++fullRankingLoadSeq;
+  const requestedMode = currentRankingMode;
+  if (currentRankingMode === 'event' && speedrun) return speedrun.loadFullRanking();
+  document.querySelector('.full-ranking-title').textContent = '🏆 TOP 50 랭킹';
+  document.querySelector('.full-ranking-sub').textContent = currentRankingMode === 'today' ? '오늘 점수순' : '전체 점수순';
   const list = document.getElementById('full-ranking-list');
   if (!list) return;
 
@@ -1311,8 +1334,9 @@ async function loadFullRanking() {
   list.innerHTML = '<div class="full-ranking-loading">TOP 50 불러오는 중...</div>';
 
   try {
-    const q = query(collection(db, 'scores'), orderBy('score', 'desc'), limit(50));
+    const q = query(collection(db, currentRankingMode === 'today' ? getDailyCollectionName() : 'scores'), orderBy('score', 'desc'), limit(50));
     const snap = await getDocs(q);
+    if (requestSeq !== fullRankingLoadSeq || requestedMode !== currentRankingMode) return;
 
     if (snap.empty) {
       list.innerHTML = '<div class="full-ranking-empty">아직 랭킹 기록이 없어요.</div>';
@@ -1332,6 +1356,7 @@ async function loadFullRanking() {
       </div>
     `).join('');
   } catch (e) {
+    if (requestSeq !== fullRankingLoadSeq || requestedMode !== currentRankingMode) return;
     console.warn('[큐플] TOP 50 랭킹 불러오기 실패:', e);
     list.innerHTML = '<div class="full-ranking-error">랭킹을 불러오지 못했어요. 잠시 후 다시 눌러주세요.</div>';
   }
@@ -1418,6 +1443,7 @@ function updateScoreUI() {
   setText('mob-best',        bs.toLocaleString());
   setText('mob-wm',          watermelonCount + '개');
   setText('mob-rank-best',   bs.toLocaleString());
+  speedrun?.syncStats();
 }
 
 function updateNextPreview() {
@@ -1436,20 +1462,21 @@ function setImg(id, src)  { const el = document.getElementById(id); if (el) el.s
 // ====================================================
 // 게임오버 모달
 // ====================================================
-function showGameoverModal(scoreUpdated, wmUpdated) {
-  const bs  = Math.max(score, lsGetInt(LS.BEST_SCORE, 0));
-  const bwm = Math.max(watermelonCount, lsGetInt(LS.BEST_WATERMELON, 0));
+function showGameoverModal(scoreUpdated, wmUpdated, result = captureRoundResult()) {
+  const bs = result.bestScore;
+  const bwm = result.bestWatermelonCount;
 
-  setText('go-player',  `플레이어: ${nickname}`);
-  setText('go-score',   score.toLocaleString() + 'P');
+  setText('go-player',  `플레이어: ${result.nickname}`);
+  setText('go-score',   result.score.toLocaleString() + 'P');
   setText('go-best',    bs.toLocaleString() + 'P');
-  setText('go-wm',      watermelonCount + '개');
+  setText('go-wm',      result.watermelonCount + '개');
   setText('go-best-wm', bwm + '개');
 
   let msg = '아쉽지만 최고 기록에는 도달하지 못했어요.';
-  if (scoreUpdated)   msg = '🎉 최고 기록 경신! 랭킹에 반영됐어요.';
+  if (scoreUpdated)   msg = '🎉 최고 기록 경신!';
   else if (wmUpdated) msg = '👄 1991 기록 경신! 더 많이 만들었어요.';
   setText('go-message', msg);
+  setText('go-save-state', normalSaveState.roundId === result.roundId ? normalSaveState.text : '');
 
   document.getElementById('gameover-modal').classList.remove('hidden');
 }
@@ -1459,6 +1486,9 @@ function hideGameoverModal() { document.getElementById('gameover-modal').classLi
 // 닉네임 모달
 // ====================================================
 function showNicknameModal() {
+  if (speedrun?.isEventMode() && ['running', 'countdown'].includes(speedrun.phase)) {
+    speedrun.notice('닉네임은 도전을 마친 뒤 바꿀 수 있어요.'); return;
+  }
   document.getElementById('nickname-modal').classList.remove('hidden');
   const inp = document.getElementById('nickname-input');
   inp.value = nickname || '';
@@ -1495,85 +1525,57 @@ function confirmNickname() {
   lsSet(LS.NICKNAME, nickname);
   updatePlayerDisplay();
   hideNicknameModal();
+  speedrun?.onNicknameConfirmed();
 }
 
 // ====================================================
 // 입력 처리
 // ====================================================
+const INPUT_UI_SELECTOR = 'button, input, a, dialog, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel, .mob-options-panel, .full-ranking-panel, .speedrun-ui, .pc-title, .credit, .mobile-evo-wrap';
+
+function canMoveDrop() {
+  if (gameOver || !nickname || (speedrun && !speedrun.allowsInput())) return false;
+  return !document.querySelector('.overlay:not(.hidden), .full-ranking-panel:not(.hidden), .mobile-ranking-panel:not(.hidden), .mob-options-panel:not(.hidden)');
+}
+function canAcceptDrop() {
+  return canMoveDrop() && canDrop && performance.now() >= nextDropAt;
+}
+function isInputUI(target) { return target instanceof Element && Boolean(target.closest(INPUT_UI_SELECTOR)); }
+
 function initInput() {
-  canvas.addEventListener('mousemove', e => {
-    if (gameOver) return;
-    dropX = toGameX(e.clientX);
-  });
-
-  canvas.addEventListener('click', () => {
-    if (gameOver || !canDrop) return;
-    dropBall();
-  });
-
-  canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    if (gameOver) return;
-    const rawX = toGameX(e.touches[0].clientX);
-    dropX = Math.max(0, Math.min(BOARD_WIDTH, rawX));
+  canvas.addEventListener('mousemove', event => { if (canMoveDrop()) dropX = toGameX(event.clientX); });
+  canvas.addEventListener('click', () => { if (canAcceptDrop()) dropBall(); });
+  canvas.addEventListener('touchstart', event => {
+    event.preventDefault(); if (!canMoveDrop()) return;
+    dropX = Math.max(0, Math.min(BOARD_WIDTH, toGameX(event.touches[0].clientX)));
   }, { passive: false });
-
-  canvas.addEventListener('touchmove', e => {
-    if (gameOver) return;
-    e.preventDefault();
-    const rawX = toGameX(e.touches[0].clientX);
-    dropX = Math.max(0, Math.min(BOARD_WIDTH, rawX));
+  canvas.addEventListener('touchmove', event => {
+    event.preventDefault(); if (!canMoveDrop()) return;
+    dropX = Math.max(0, Math.min(BOARD_WIDTH, toGameX(event.touches[0].clientX)));
   }, { passive: false });
-
-  canvas.addEventListener('touchend', e => {
-    e.preventDefault();
-    if (gameOver || !canDrop) return;
-    dropBall();
+  canvas.addEventListener('touchend', event => {
+    event.preventDefault(); if (canAcceptDrop()) dropBall();
   }, { passive: false });
-
-  // ── 터치: 캔버스 바깥 파란 영역도 받기 ──
-  document.addEventListener('touchstart', e => {
-    if (gameOver) return;
-    const touch = e.touches[0];
-    const rect  = canvas.getBoundingClientRect();
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right) return;
-    dropX = touch.clientX < rect.left ? 0 : BOARD_WIDTH;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', e => {
-    if (gameOver) return;
-    const touch = e.touches[0];
-    const rect  = canvas.getBoundingClientRect();
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right) return;
-    dropX = touch.clientX < rect.left ? 0 : BOARD_WIDTH;
-  }, { passive: true });
-
-  document.addEventListener('touchend', e => {
-    if (gameOver || !canDrop) return;
-    const touch = e.changedTouches[0];
-    const rect  = canvas.getBoundingClientRect();
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right) return;
-    dropX = touch.clientX < rect.left ? 0 : BOARD_WIDTH;
-    dropBall();
-  }, { passive: true });
-
-  // ── PC 마우스: 캔버스 바깥 영역도 받기 ──
-  document.addEventListener('mousemove', e => {
-    if (gameOver) return;
+  const moveOutside = event => {
+    if (!canMoveDrop() || isInputUI(event.target)) return;
+    const point = event.touches?.[0] || event;
     const rect = canvas.getBoundingClientRect();
-    if (e.clientX >= rect.left && e.clientX <= rect.right) return;
-    dropX = e.clientX < rect.left ? 0 : BOARD_WIDTH;
-  });
-
-  document.addEventListener('click', e => {
-    if (gameOver || !canDrop) return;
-    // 버튼, 입력창 등 UI 요소 클릭은 무시
-    if (e.target.closest('button, input, a, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel, .mob-options-panel, .pc-controls, .pc-quick-btns, .pc-title, .credit')) return;
+    if (point.clientX < rect.left) dropX = 0;
+    if (point.clientX > rect.right) dropX = BOARD_WIDTH;
+  };
+  const dropOutside = event => {
+    if (!canAcceptDrop() || isInputUI(event.target)) return;
+    const point = event.changedTouches?.[0] || event;
     const rect = canvas.getBoundingClientRect();
-    if (e.clientX >= rect.left && e.clientX <= rect.right) return;
-    dropX = e.clientX < rect.left ? 0 : BOARD_WIDTH;
+    if (point.clientX >= rect.left && point.clientX <= rect.right) return;
+    dropX = point.clientX < rect.left ? 0 : BOARD_WIDTH;
     dropBall();
-  });
+  };
+  document.addEventListener('touchstart', moveOutside, { passive: true });
+  document.addEventListener('touchmove', moveOutside, { passive: true });
+  document.addEventListener('touchend', dropOutside, { passive: true });
+  document.addEventListener('mousemove', moveOutside);
+  document.addEventListener('click', dropOutside);
 }
 
 // ====================================================
@@ -1725,6 +1727,17 @@ async function init() {
   buildEvoRing(currentLv);
   updateSoundButtons();
   showEmptyRanking();
+  speedrun = createSpeedrun({
+    db,
+    getState: () => ({ score, watermelonCount, nickname, playerId, gameOver }),
+    getRankingMode: () => currentRankingMode,
+    resetBoard: resetGameBoard,
+    freezeBoard: freezeGameBoard,
+    showNickname: showNicknameModal,
+    hideOverlays: () => { hideGameoverModal(); hideMobOptions(); hideMobileRanking(); hideFullRanking(); },
+    selectRanking: mode => { currentRankingMode = mode; updateRankingTabs(); loadRanking(); },
+    showFullRanking,
+  });
   loadRanking();
 
   animFrameId = requestAnimationFrame(gameLoop);
