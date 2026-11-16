@@ -18,7 +18,7 @@ import { getFirestore, doc, setDoc, getDoc,
          getDocs, serverTimestamp, runTransaction }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-import { createSpeedrun } from './speedrun.js?v=20261116-speedrun-1';
+import { createSpeedrun } from './speedrun.js?v=20261116-speedrun-2';
 
 // ====================================================
 // [A] FIREBASE CONFIG — 여기에 입력하세요
@@ -176,7 +176,9 @@ let nextDropAt = 0;
 let roundSeq = 0;
 let gameoverModalTimer = null, shakeTimer = null;
 let normalSaveState = { roundId: 0, text: '' };
-let normalPauseStarted = null;
+let boardPauseStarted = null;
+let skipNextPhysicsFrame = false;
+let assetsLoaded = false;
 let currentLv = 1, nextLv = 1;
 let dropX = BOARD_WIDTH / 2;
 let soundEnabled = true; // 효과음 on/off
@@ -743,7 +745,7 @@ function renderFrame() {
   ctx.restore();
 
   // 합체 POP 효과는 공을 그린 뒤에 한 번 더 그려서 약해 보이지 않게 처리한다.
-  const now = Date.now();
+  const now = boardPauseStarted?.wall ?? Date.now();
 
   // 구름은 모든 공보다 먼저 그린다.
   // 그래야 공을 떨어뜨린 직후 생성된 물리 공이 구름 뒤로 숨어 보이지 않는다.
@@ -941,7 +943,8 @@ function resetGameBoard() {
   gameoverModalTimer = null; shakeTimer = null;
   document.getElementById('canvas-wrap')?.classList.remove('shake-hard');
   normalSaveState = { roundId: roundSeq, text: '' };
-  normalPauseStarted = null;
+  boardPauseStarted = null;
+  skipNextPhysicsFrame = false;
   nextDropAt = 0;
   gameOver = false; canDrop = true;
   score = 0; watermelonCount = 0;
@@ -995,21 +998,34 @@ function freezeGameBoard() {
   renderFrame();
 }
 
+function syncBoardPause() {
+  const paused = Boolean(speedrun?.pausesBoard());
+  const now = performance.now();
+  if (paused && boardPauseStarted === null) {
+    boardPauseStarted = { wall: Date.now(), perf: now };
+    physicsAccumulator = 0;
+  } else if (!paused && boardPauseStarted !== null) {
+    const wallDuration = Math.max(0, Date.now() - boardPauseStarted.wall);
+    const perfDuration = Math.max(0, now - boardPauseStarted.perf);
+    activeBodies.forEach(body => { if (body.gameData) body.gameData.spawnTime += wallDuration; });
+    dangerTimers.forEach((value, key) => dangerTimers.set(key, value + wallDuration));
+    mergeEffects.forEach(effect => { effect.startTime += wallDuration; });
+    if (nextDropAt > 0) nextDropAt += perfDuration;
+    boardPauseStarted = null;
+    physicsAccumulator = 0;
+    lastFrameTime = now;
+    skipNextPhysicsFrame = true;
+  }
+}
+
 function gameLoop(now = performance.now()) {
   let frameDelta = now - lastFrameTime;
   lastFrameTime = now;
   frameDelta = Math.max(0, Math.min(frameDelta, MAX_PHYSICS_DELTA));
   speedrun?.tick(now);
   const paused = Boolean(speedrun?.pausesBoard());
-  if (paused && !speedrun?.isEventMode()) {
-    normalPauseStarted ??= Date.now();
-  } else if (normalPauseStarted !== null) {
-    const duration = Math.max(0, Date.now() - normalPauseStarted);
-    activeBodies.forEach(body => { if (body.gameData) body.gameData.spawnTime += duration; });
-    dangerTimers.forEach((value, key) => dangerTimers.set(key, value + duration));
-    mergeEffects.forEach(effect => { effect.startTime += duration; });
-    normalPauseStarted = null;
-  }
+  syncBoardPause();
+  if (skipNextPhysicsFrame) { frameDelta = 0; skipNextPhysicsFrame = false; }
   if (!gameOver) canDrop = now >= nextDropAt;
   if (!gameOver && !paused) {
     physicsAccumulator += frameDelta;
@@ -1229,9 +1245,9 @@ function ensureOneRankingTab(tabId, listId) {
 
   tabs.innerHTML = `
     <button type="button" class="ranking-tab-btn" data-rank-mode="today"
-      style="flex:1;border:0;border-radius:999px;padding:8px 10px;font-weight:800;cursor:pointer;">Today</button>
+      style="flex:1;border:0;border-radius:999px;padding:8px 10px;font-weight:800;cursor:pointer;">오늘</button>
     <button type="button" class="ranking-tab-btn" data-rank-mode="total"
-      style="flex:1;border:0;border-radius:999px;padding:8px 10px;font-weight:800;cursor:pointer;">Total</button>
+      style="flex:1;border:0;border-radius:999px;padding:8px 10px;font-weight:800;cursor:pointer;">전체</button>
   `;
 
   list.parentElement.insertBefore(tabs, list);
@@ -1366,11 +1382,13 @@ function showFullRanking() {
   const el = document.getElementById('full-ranking-panel');
   if (el) el.classList.remove('hidden');
   loadFullRanking();
+  speedrun?.refreshPauseReasons();
 }
 
 function hideFullRanking() {
   const el = document.getElementById('full-ranking-panel');
   if (el) el.classList.add('hidden');
+  speedrun?.refreshPauseReasons();
 }
 
 function escHtml(s) {
@@ -1534,7 +1552,7 @@ function confirmNickname() {
 const INPUT_UI_SELECTOR = 'button, input, a, dialog, .overlay, .panel, .mobile-info-bar, .mobile-controls, .mobile-ranking-panel, .mob-options-panel, .full-ranking-panel, .speedrun-ui, .pc-title, .credit, .mobile-evo-wrap';
 
 function canMoveDrop() {
-  if (gameOver || !nickname || (speedrun && !speedrun.allowsInput())) return false;
+  if (!assetsLoaded || gameOver || !nickname || (speedrun && !speedrun.allowsInput())) return false;
   return !document.querySelector('.overlay:not(.hidden), .full-ranking-panel:not(.hidden), .mobile-ranking-panel:not(.hidden), .mob-options-panel:not(.hidden)');
 }
 function canAcceptDrop() {
@@ -1680,7 +1698,7 @@ async function init() {
   }
 
   initFirebase();
-  await loadImages();
+  const assetsReady = loadImages();
   initCanvas();
   initPhysics();
   initInput();
@@ -1731,6 +1749,8 @@ async function init() {
     db,
     getState: () => ({ score, watermelonCount, nickname, playerId, gameOver }),
     getRankingMode: () => currentRankingMode,
+    ready: () => assetsReady,
+    pauseChanged: syncBoardPause,
     resetBoard: resetGameBoard,
     freezeBoard: freezeGameBoard,
     showNickname: showNicknameModal,
@@ -1740,7 +1760,11 @@ async function init() {
   });
   loadRanking();
 
-  animFrameId = requestAnimationFrame(gameLoop);
+  await assetsReady;
+  assetsLoaded = true;
+  updateNextPreview();
+  lastFrameTime = performance.now();
+  if (!animFrameId && !gameOver) animFrameId = requestAnimationFrame(gameLoop);
 }
 
 // ====================================================
@@ -1828,18 +1852,22 @@ function bind(id, ev, fn) { const el = document.getElementById(id); if (el) el.a
 function showMobileRanking() {
   const el = document.getElementById('mobile-ranking-panel');
   if (el) el.classList.remove('hidden');
+  speedrun?.refreshPauseReasons();
 }
 function hideMobileRanking() {
   const el = document.getElementById('mobile-ranking-panel');
   if (el) el.classList.add('hidden');
+  speedrun?.refreshPauseReasons();
 }
 function showMobOptions() {
   const el = document.getElementById('mob-options-panel');
   if (el) el.classList.remove('hidden');
+  speedrun?.refreshPauseReasons();
 }
 function hideMobOptions() {
   const el = document.getElementById('mob-options-panel');
   if (el) el.classList.add('hidden');
+  speedrun?.refreshPauseReasons();
 }
 
 // 모바일 전용 UI 보정

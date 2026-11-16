@@ -1,11 +1,11 @@
-const CACHE = '1991-speedrun-20261116-1';
+const CACHE = '1991-speedrun-20261116-2';
 const localUrl = path => new URL(path, self.registration.scope).href;
 const INDEX_URL = localUrl('index.html');
 const MATTER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js';
 const ASSETS = [
   'index.html', 'style.css?v=20260519-review2',
-  'speedrun.css?v=20261116-speedrun-1', 'game.js?v=20261116-speedrun-1',
-  'speedrun.js?v=20261116-speedrun-1', 'speedrun-core.js?v=20261116-speedrun-1',
+  'speedrun.css?v=20261116-speedrun-2', 'game.js?v=20261116-speedrun-2',
+  'speedrun.js?v=20261116-speedrun-2', 'speedrun-core.js?v=20261116-speedrun-2',
 ].map(localUrl);
 
 self.addEventListener('install', event => {
