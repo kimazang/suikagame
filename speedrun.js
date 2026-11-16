@@ -4,8 +4,8 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import {
   SPEEDRUN_EVENT_ID, SPEEDRUN_EVENT_TITLE, validRecord, isBetterRecord,
-  formatTime, formatElapsedTime, rankRecords, eventStatus, createStopwatch, createPauseGate, isEventLink,
-} from './speedrun-core.js?v=20261116-speedrun-2';
+  formatTime, formatElapsedTime, rankRecords, eventStatus, createStopwatch, createPauseGate, isEventLink, eventDateParts,
+} from './speedrun-core.js?v=20261116-speedrun-3';
 
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { const el = $(id); if (el && el.textContent !== String(text)) el.textContent = text; };
@@ -17,14 +17,8 @@ const delayLimit = (promise, milliseconds = 15000) => {
     timeout = setTimeout(() => reject(new Error('connection-timeout')), milliseconds);
   })]).finally(() => clearTimeout(timeout));
 };
-const dateLabel = value => {
-  const parts = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).formatToParts(new Date(value));
-  const part = type => parts.find(value => value.type === type)?.value;
-  return `${part('month')}.${part('day')} ${part('hour')}:${part('minute')}`;
-};
+const pauseIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/></svg>';
+const playIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.5a.6.6 0 0 1 .9-.5l7 4.5a.6.6 0 0 1 0 1l-7 4.5a.6.6 0 0 1-.9-.5z"/></svg>';
 
 export function createSpeedrun(hooks) {
   return new Speedrun(hooks, isEventLink(location.search));
@@ -53,6 +47,7 @@ class Speedrun {
     this.lastPaint = 0;
     this.confirmAction = null;
     this.pendingGuide = false;
+    this.rankingReturn = null;
     this.originalMobileLabel = null;
     this.buildUI();
     this.installRankingTabs();
@@ -67,7 +62,7 @@ class Speedrun {
   isPaused() { return this.isActiveAttempt() && this.pauseGate.paused(); }
   pausesBoard() {
     return this.phase === 'countdown' || this.isPaused()
-      || (!this.isEventMode() && $('sr-guide').open);
+      || (!this.isEventMode() && ($('sr-guide').open || this.pendingGuide || this.rankingReturn === 'guide'));
   }
   allowsInput() {
     return (!this.isEventMode() || (this.isRunning() && !this.isPaused()))
@@ -94,7 +89,8 @@ class Speedrun {
     const pauseButton = $('sr-pause');
     if (pauseButton) {
       pauseButton.disabled = !this.isActiveAttempt();
-      pauseButton.textContent = this.pauseGate.has('manual') ? '계속하기' : '일시정지';
+      const manual = this.pauseGate.has('manual');
+      pauseButton.innerHTML = `${manual ? playIcon : pauseIcon}<span>${manual ? '계속하기' : '일시정지'}</span>`;
       pauseButton.setAttribute('aria-pressed', String(this.pauseGate.has('manual')));
     }
     setText('sr-clock-label', paused ? '일시정지' : this.phase === 'countdown' ? '시작 대기' : '경과 시간');
@@ -110,7 +106,11 @@ class Speedrun {
   buildUI() {
     const header = document.createElement('section');
     header.id = 'sr-header'; header.className = 'sr-header speedrun-ui'; header.hidden = true;
-    header.innerHTML = '<button id="sr-entry" class="sr-entry" type="button">타임어택 이벤트 참가하기</button>';
+    header.innerHTML = '<button id="sr-entry" class="sr-entry" type="button">'
+      + '<span class="sr-entry-mark" aria-hidden="true">🏆</span>'
+      + '<span class="sr-entry-copy"><span id="sr-entry-note">기간 한정 · 총 100만 사이버머니</span>'
+      + '<strong id="sr-entry-label">타임어택 이벤트 참가하기</strong></span>'
+      + '<span class="sr-entry-arrow" aria-hidden="true">›</span></button>';
     $('canvas-wrap').before(header);
 
     const live = document.createElement('section');
@@ -118,9 +118,9 @@ class Speedrun {
     live.setAttribute('aria-label', '이벤트 시간과 조작');
     live.innerHTML = '<div class="sr-timer-group"><span id="sr-clock-label">경과 시간</span>'
       + '<strong id="sr-clock" class="sr-clock" aria-label="경과 시간">00:00</strong></div>'
-      + '<div class="sr-play-controls"><button id="sr-pause" type="button" aria-pressed="false">일시정지</button>'
-      + '<button id="sr-restart" type="button">다시 시작</button></div>'
-      + '<button id="sr-leave" class="sr-text-button" type="button">일반 게임</button>';
+      + `<div class="sr-play-controls"><button id="sr-pause" type="button" aria-pressed="false">${pauseIcon}<span>일시정지</span></button>`
+      + '<button id="sr-restart" type="button">처음부터</button></div>'
+      + '<button id="sr-leave" class="sr-text-button" type="button">일반 게임하기</button>';
     $('canvas-wrap').after(live);
 
     const stats = document.createElement('section');
@@ -143,20 +143,31 @@ class Speedrun {
       <dialog id="sr-guide" class="sr-dialog" aria-labelledby="sr-guide-title">
         <button class="sr-close" data-sr="close-guide" type="button" aria-label="안내 닫기">✕</button>
         <h2 id="sr-guide-title">⏱ ${SPEEDRUN_EVENT_TITLE}</h2>
-        <div class="sr-event-period"><span>이벤트 기간</span><strong id="sr-guide-period"></strong></div>
+        <section class="sr-event-period" aria-label="이벤트 기간">
+          <div class="sr-section-heading"><span>이벤트 기간</span><small>한국시간</small></div>
+          <div class="sr-period-grid"><div><span>시작</span><strong id="sr-guide-start-date">—</strong><time id="sr-guide-start-time">—</time></div>
+            <span class="sr-period-arrow" aria-hidden="true">→</span>
+            <div><span>마감</span><strong id="sr-guide-end-date">—</strong><time id="sr-guide-end-time">—</time></div></div>
+        </section>
+        <section class="sr-prizes" aria-label="이벤트 상금">
+          <div class="sr-section-heading"><span>이벤트 상금</span><small>사이버머니</small></div>
+          <div class="sr-prize-grid"><div><span>1등</span><strong>50만</strong></div>
+            <div><span>2등</span><strong>30만</strong></div><div><span>3등</span><strong>20만</strong></div></div>
+        </section>
         <div class="sr-guide-player"><span>참여 닉네임</span><strong id="sr-guide-player"></strong>
+          <button id="sr-change-nickname" class="sr-nickname-button" type="button">닉네임 변경하기</button>
           <small id="sr-guide-best" hidden></small></div>
         <ol class="sr-rules"><li><b>3초 카운트 후</b> 시작해요.</li>
           <li><b>1991 한 개를 만들면</b> 시간·점수가 기록돼요.</li>
           <li>빠른 시간순, 같은 시간은 높은 점수순이에요.</li>
           <li>재도전은 무제한! 최고 기록만 남아요.</li>
-          <li>일시정지·재시작이 가능해요.</li>
+          <li>일시정지하거나 처음부터 다시 할 수 있어요.</li>
           <li>탭·앱 전환이나 옵션·랭킹창을 열면 자동 정지돼요.</li></ol>
         <p class="sr-precision">0.01초 기준 · 시간과 점수가 모두 같으면 공동 순위</p>
         <p id="sr-prepare-status" class="sr-status" role="status" hidden></p>
         <div class="sr-button-stack"><button id="sr-start" class="btn btn-orange" type="button" disabled>준비 중…</button>
           <button data-sr="ranks" class="btn btn-blue" type="button">이벤트 랭킹</button>
-          <button data-sr="close-guide" class="sr-text-button" type="button">일반 게임</button></div>
+          <button data-sr="close-guide" class="sr-text-button" type="button">일반 게임하기</button></div>
         <button id="sr-pending" class="sr-text-button" type="button" hidden>대기 기록 등록</button>
       </dialog>
       <dialog id="sr-result" class="sr-dialog sr-result" aria-labelledby="sr-result-title">
@@ -167,11 +178,11 @@ class Speedrun {
         <div class="sr-button-stack"><button id="sr-result-retry" class="btn btn-orange" type="button">다시 도전</button>
           <button id="sr-save-retry" class="btn btn-ghost" type="button" hidden>다시 등록</button>
           <button data-sr="ranks" class="btn btn-blue" type="button">이벤트 랭킹</button>
-          <button data-sr="normal" class="sr-text-button" type="button">일반 게임</button></div>
+          <button data-sr="normal" class="sr-text-button" type="button">일반 게임하기</button></div>
       </dialog>
       <dialog id="sr-confirm" class="sr-dialog sr-confirm" aria-labelledby="sr-confirm-title">
         <h2 id="sr-confirm-title">도전을 그만둘까요?</h2><p class="sr-note">현재 판의 기록은 저장되지 않아요.</p>
-        <div class="sr-button-stack"><button id="sr-confirm-yes" class="btn btn-orange" type="button">일반 게임</button>
+        <div class="sr-button-stack"><button id="sr-confirm-yes" class="btn btn-orange" type="button">일반 게임하기</button>
           <button data-sr="close-confirm" class="btn btn-ghost" type="button">계속하기</button></div>
       </dialog><div id="sr-toast" class="sr-toast" role="status" hidden></div>`;
     document.body.append(dialogs);
@@ -179,6 +190,7 @@ class Speedrun {
 
   bindUI() {
     $('sr-entry').addEventListener('click', () => this.openGuide());
+    $('sr-change-nickname').addEventListener('click', () => this.changeNickname());
     $('sr-start').addEventListener('click', () => this.beginAttempt());
     $('sr-result-retry').addEventListener('click', () => this.beginAttempt());
     $('sr-restart').addEventListener('click', () => this.requestRestart());
@@ -238,7 +250,9 @@ class Speedrun {
     const data = snap.data();
     this.config = { title: SPEEDRUN_EVENT_TITLE, enabled: data.enabled === true,
       startsAt: data.startsAt?.toMillis?.(), endsAt: data.endsAt?.toMillis?.() };
-    setText('sr-guide-period', `${dateLabel(this.config.startsAt)} ~ ${dateLabel(this.config.endsAt)}`);
+    const start = eventDateParts(this.config.startsAt), end = eventDateParts(this.config.endsAt);
+    setText('sr-guide-start-date', start.date); setText('sr-guide-start-time', start.time);
+    setText('sr-guide-end-date', end.date); setText('sr-guide-end-time', end.time);
     return this.config;
   }
 
@@ -247,7 +261,8 @@ class Speedrun {
     const status = eventStatus(this.config);
     $('sr-header').hidden = active || (status !== 'open' && !this.eventLink);
     $('sr-live').hidden = !active;
-    setText('sr-entry', status === 'closed' ? '이벤트 결과 보기' : '타임어택 이벤트 참가하기');
+    setText('sr-entry-label', status === 'closed' ? '이벤트 결과 보기' : '타임어택 이벤트 참가하기');
+    setText('sr-entry-note', status === 'closed' ? '1991 스피드런 이벤트' : '기간 한정 · 총 100만 사이버머니');
     document.querySelectorAll('[data-rank-mode="event"]').forEach(button => {
       button.hidden = status !== 'open' && !this.eventLink;
       button.parentElement.classList.toggle('sr-two-tabs', button.hidden);
@@ -285,12 +300,12 @@ class Speedrun {
     $('sr-prepare-status').hidden = !message;
   }
 
-  async openGuide() {
+  async openGuide({ returning = false } = {}) {
     this.autoOpened = true;
     if (!this.hooks.getState().nickname) {
       this.pendingGuide = true; this.hooks.showNickname(); return;
     }
-    if (this.config && eventStatus(this.config) === 'closed') { this.openRankings(); return; }
+    if (!returning && this.config && eventStatus(this.config) === 'closed') { this.openRankings(); return; }
     this.hooks.hideOverlays(); this.showDialog('sr-guide');
     setText('sr-guide-player', this.hooks.getState().nickname);
     this.setPreparationMessage('');
@@ -307,7 +322,9 @@ class Speedrun {
     } catch (error) {
       if (token !== this.operation) return;
       this.setPreparationMessage(this.prepareMessage(error));
-      $('sr-start').disabled = false; setText('sr-start', '다시 시도');
+      const unavailable = error.message === 'event-not-open';
+      $('sr-start').disabled = unavailable;
+      setText('sr-start', unavailable ? (eventStatus(this.config) === 'scheduled' ? '시작 전' : '접수 종료') : '다시 시도');
     }
   }
 
@@ -315,7 +332,16 @@ class Speedrun {
     if (this.pendingGuide) { this.pendingGuide = false; this.openGuide(); }
   }
 
+  changeNickname() {
+    if (this.isActiveAttempt()) return;
+    this.operation++; this.pendingGuide = true;
+    this.closeDialog('sr-guide'); this.hooks.showNickname(); this.hooks.pauseChanged?.();
+  }
+
+  onNicknameCancelled() { this.onNicknameConfirmed(); }
+
   prepareMessage(error) {
+    if (error.message === 'game-images-unavailable') return '얼굴 이미지를 불러오지 못했어요. 다시 시도해주세요.';
     if (error.message === 'event-not-open') {
       return eventStatus(this.config) === 'scheduled' ? '아직 이벤트 시작 전이에요.' : '이벤트 접수가 종료됐어요.';
     }
@@ -524,8 +550,7 @@ class Speedrun {
         }
       }
       if (!isCurrent()) return;
-      const html = '<p class="sr-rank-caption">완성 시간순 · 동시간은 점수순</p>'
-        + (rows.length ? rows.map(row => this.rankingRow(row)).join('') : '<p class="sr-rank-empty">첫 1991 완성 기록을 기다리고 있어요!</p>')
+      const html = (rows.length ? rows.map(row => this.rankingRow(row)).join('') : '<p class="sr-rank-empty">첫 1991 완성 기록을 기다리고 있어요!</p>')
         + (own ? `<div class="rank-divider"></div>${this.rankingRow(own)}` : '');
       ids.forEach(id => { $(id).innerHTML = html; });
       this.paintRankingButton(rows[0]);
@@ -561,15 +586,28 @@ class Speedrun {
   }
 
   openRankings() {
+    const returnTo = $('sr-guide').open ? 'guide' : $('sr-result').open ? 'result' : null;
     this.closeDialog('sr-guide'); this.closeDialog('sr-result');
-    this.hooks.selectRanking('event'); this.hooks.showFullRanking();
+    this.hooks.selectRanking('event'); this.hooks.showFullRanking(returnTo);
+  }
+
+  onRankingOpened(returnTo) {
+    this.rankingReturn = returnTo;
+    setText('full-ranking-close', returnTo ? '돌아가기' : '✕ 닫기');
+  }
+
+  onRankingClosed() {
+    const returnTo = this.rankingReturn; this.rankingReturn = null;
+    if (returnTo === 'guide') this.openGuide({ returning: true });
+    else if (returnTo === 'result') this.showDialog('sr-result');
+    this.refreshPauseReasons();
   }
 
   requestRestart() { this.beginAttempt(); }
 
   requestNormal() {
     if (['running', 'countdown'].includes(this.phase)) {
-      this.askConfirmation('도전을 그만둘까요?', '일반 게임', () => this.returnNormal());
+      this.askConfirmation('도전을 그만둘까요?', '일반 게임하기', () => this.returnNormal());
     } else this.returnNormal();
   }
   askConfirmation(title, actionLabel, action) {
@@ -577,6 +615,7 @@ class Speedrun {
     this.confirmAction = action; this.hooks.hideOverlays(); this.showDialog('sr-confirm');
   }
   returnNormal() {
+    this.rankingReturn = null;
     this.operation++; this.clock.stop(); this.countdownClock.stop(); this.mode = 'normal'; this.phase = 'idle';
     this.pauseGate.clear();
     this.closeAllDialogs(); $('sr-countdown').hidden = true;

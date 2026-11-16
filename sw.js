@@ -1,11 +1,15 @@
-const CACHE = '1991-speedrun-20261116-2';
+const CACHE = '1991-speedrun-20261116-3';
 const localUrl = path => new URL(path, self.registration.scope).href;
 const INDEX_URL = localUrl('index.html');
 const MATTER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js';
+const IMAGE_PATHS = new Set([
+  'suika1.png', 'suika2.png', 'suika3.png', 'suika4.png', 'suika5.png',
+  'suika6.png', 'suika7.png', 'suika8_new.png', 'suika9.png', 'suika10.png', 'suika11.png', 'cloud.png',
+].map(path => new URL(path, self.registration.scope).pathname));
 const ASSETS = [
   'index.html', 'style.css?v=20260519-review2',
-  'speedrun.css?v=20261116-speedrun-2', 'game.js?v=20261116-speedrun-2',
-  'speedrun.js?v=20261116-speedrun-2', 'speedrun-core.js?v=20261116-speedrun-2',
+  'speedrun.css?v=20261116-speedrun-3', 'game.js?v=20261116-speedrun-3',
+  'speedrun.js?v=20261116-speedrun-3', 'speedrun-core.js?v=20261116-speedrun-3',
 ].map(localUrl);
 
 self.addEventListener('install', event => {
@@ -26,16 +30,15 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   // In particular, do not intercept Auth/Firestore or other cross-origin APIs.
   if (request.method !== 'GET') return;
-  const gameImage = request.destination === 'image'
-    && url.origin === 'https://raw.githubusercontent.com'
-    && url.pathname.startsWith('/kimazang/suikagame/main/');
+  const gameImage = url.origin === self.location.origin && IMAGE_PATHS.has(url.pathname);
   if (gameImage || url.href === MATTER_URL) {
     event.respondWith((async () => {
-      const cached = await caches.match(request);
-      if (cached) return cached;
+      const cache = await caches.open(CACHE);
+      // 같은 URL이어도 불투명한 외부 응답을 CORS 요청에 재사용하지 않는다.
+      const cached = await cache.match(request);
+      if (cached && (cached.type !== 'opaque' || request.mode === 'no-cors')) return cached;
       const response = await fetch(request);
       if (response.ok || response.type === 'opaque') {
-        const cache = await caches.open(CACHE);
         await cache.put(request, response.clone());
       }
       return response;
@@ -53,12 +56,13 @@ self.addEventListener('fetch', event => {
         }
         return response;
       } catch (error) {
-        const cached = await caches.match(INDEX_URL);
+        const cache = await caches.open(CACHE);
+        const cached = await cache.match(INDEX_URL);
         if (cached) return cached;
         throw error;
       }
     })());
   } else if (ASSETS.includes(url.href)) {
-    event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
+    event.respondWith(caches.open(CACHE).then(cache => cache.match(request)).then(cached => cached || fetch(request)));
   }
 });

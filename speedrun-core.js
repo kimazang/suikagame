@@ -3,6 +3,17 @@
 export const SPEEDRUN_EVENT_ID = 'speedrun_test';
 export const SPEEDRUN_EVENT_TITLE = '1991 스피드런 이벤트';
 
+export function eventDateParts(value) {
+  if (!Number.isFinite(value)) return { date: '—', time: '—' };
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', weekday: 'short',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(value));
+  const part = type => parts.find(item => item.type === type)?.value;
+  return { date: `${part('month')}월 ${part('day')}일 (${part('weekday')})`,
+    time: `${part('hour')}:${part('minute')}` };
+}
+
 export function isEventLink(search = '') {
   return ['event', 'test'].includes(new URLSearchParams(search).get('speedrun'));
 }

@@ -18,7 +18,7 @@ import { getFirestore, doc, setDoc, getDoc,
          getDocs, serverTimestamp, runTransaction }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-import { createSpeedrun } from './speedrun.js?v=20261116-speedrun-2';
+import { createSpeedrun } from './speedrun.js?v=20261116-speedrun-3';
 
 // ====================================================
 // [A] FIREBASE CONFIG — 여기에 입력하세요
@@ -48,24 +48,14 @@ const PHYSICS_SPEED = 1.0;
 const MAX_PHYSICS_DELTA = 100; // 프레임 급락 시 누적 물리 튐 방지용 상한 ms
 const FIXED_PHYSICS_STEP = 1000 / 60; // PC/모바일 공통 고정 물리 스텝
 
-// 이미지 URL (여기서 수정)
+// Canvas와 다음 공·제작법이 같은 출처의 이미지를 공유한다.
+// 외부 이미지의 no-cors 캐시가 Canvas용 CORS 요청에 섞이는 일을 피한다.
+const imageUrl = filename => new URL(`${filename}?v=20261116-faces-3`, import.meta.url).href;
 const BALL_IMAGES = [
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika1.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika2.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika3.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika4.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika5.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika6.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika7.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika8_new.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika9.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika10.png?v=1991-9',
-  'https://raw.githubusercontent.com/kimazang/suikagame/main/suika11.png?v=1991-9',
-];
-
-// 구름 이미지 URL — GitHub suikagame 폴더의 cloud.png를 사용
-// github.com/.../blob/... 주소보다 raw.githubusercontent.com 주소가 이미지 로딩에 안정적이다.
-const CLOUD_IMAGE_URL = 'https://raw.githubusercontent.com/kimazang/suikagame/main/cloud.png?v=1991-9';
+  'suika1.png', 'suika2.png', 'suika3.png', 'suika4.png', 'suika5.png',
+  'suika6.png', 'suika7.png', 'suika8_new.png', 'suika9.png', 'suika10.png', 'suika11.png',
+].map(imageUrl);
+const CLOUD_IMAGE_URL = imageUrl('cloud.png');
 
 // 단계별 반지름 (레퍼런스 기준 지름/2)
 // 1:32 2:46 3:60 4:70 5:85 6:110 7:130 8:155 9:180(추정) 10:220 11:260
@@ -277,6 +267,28 @@ const imgs = new Array(11).fill(null);
 // 처음 로딩할 때 단계별 크기에 맞춘 고해상도 원형 구슬 이미지를 미리 만들어둔다.
 const ballSprites = new Array(11).fill(null);
 let cloudImg = null;
+let assetRetryPromise = null;
+
+function loadGameImage(url) {
+  const attempt = source => new Promise((resolve, reject) => {
+    const img = new Image();
+    const timer = setTimeout(() => finish(false), 15000);
+    const finish = ok => {
+      clearTimeout(timer); img.onload = null; img.onerror = null;
+      if (ok && img.naturalWidth > 0) resolve(img);
+      else reject(new Error('game-images-unavailable'));
+    };
+    // 같은 출처이므로 crossOrigin을 설정할 필요가 없다.
+    img.onload = () => finish(true);
+    img.onerror = () => finish(false);
+    img.src = source;
+  });
+  return attempt(url).catch(() => {
+    const fresh = new URL(url);
+    fresh.searchParams.set('retry', String(Date.now()));
+    return attempt(fresh.href);
+  });
+}
 
 function createBallSprite(img, level) {
   const radius = BALL_RADII[level - 1];
@@ -289,6 +301,7 @@ function createBallSprite(img, level) {
   off.height = s;
 
   const octx = off.getContext('2d');
+  if (!octx) return img;
   octx.imageSmoothingEnabled = true;
   octx.imageSmoothingQuality = 'high';
 
@@ -303,40 +316,50 @@ function createBallSprite(img, level) {
 }
 
 function loadCloudImage() {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      cloudImg = img;
-      resolve();
-    };
-    img.onerror = () => {
-      console.warn('[큐플] cloud.png 로드 실패:', CLOUD_IMAGE_URL);
-      cloudImg = null;
-      resolve();
-    };
-    img.src = CLOUD_IMAGE_URL;
+  if (cloudImg) return Promise.resolve();
+  return loadGameImage(CLOUD_IMAGE_URL).then(img => { cloudImg = img; }).catch(() => {
+    console.warn('[큐플] cloud.png 로드 실패');
   });
 }
 
 function loadImages() {
-  const ballImagePromises = BALL_IMAGES.map((url, i) =>
-    new Promise(resolve => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload  = () => {
-        imgs[i] = img;
-        ballSprites[i] = createBallSprite(img, i + 1);
-        resolve();
-      };
-      img.onerror = () => { imgs[i] = null; resolve(); };
-      img.src = url;
-    })
-  );
+  const ballImagePromises = BALL_IMAGES.map((url, i) => {
+    if (imgs[i]) return Promise.resolve();
+    return loadGameImage(url).then(img => {
+      imgs[i] = img;
+      try { ballSprites[i] = createBallSprite(img, i + 1); }
+      catch { ballSprites[i] = null; } // 스프라이트 생성이 실패해도 원본 얼굴을 그린다.
+    }).catch(() => { console.warn(`[큐플] ${i + 1}단계 얼굴 이미지 로드 실패`); });
+  });
 
   // 공 이미지와 구름 이미지를 함께 미리 로드한다.
   // 그래야 게임 시작 후 구름이 늦게 나타나거나 깜빡이는 느낌이 줄어든다.
   return Promise.all([...ballImagePromises, loadCloudImage()]);
+}
+
+function updateAssetStatus() {
+  assetsLoaded = imgs.every(img => img && img.complete && img.naturalWidth > 0);
+  let status = document.getElementById('game-assets-status');
+  if (!assetsLoaded && !status) {
+    status = document.createElement('div');
+    status.id = 'game-assets-status'; status.className = 'game-assets-status speedrun-ui';
+    status.innerHTML = '<p role="status">얼굴 이미지를 불러오지 못했어요.</p><button type="button">다시 불러오기</button>';
+    status.querySelector('button').addEventListener('click', () => retryGameImages());
+    document.getElementById('canvas-wrap').append(status);
+  }
+  if (status) status.hidden = assetsLoaded;
+}
+
+function retryGameImages() {
+  if (assetRetryPromise) return assetRetryPromise;
+  const button = document.querySelector('#game-assets-status button');
+  if (button) { button.disabled = true; button.textContent = '불러오는 중…'; }
+  assetRetryPromise = loadImages().finally(() => {
+    updateAssetStatus();
+    if (button) { button.disabled = false; button.textContent = '다시 불러오기'; }
+    assetRetryPromise = null;
+  });
+  return assetRetryPromise;
 }
 
 // ====================================================
@@ -1378,7 +1401,8 @@ async function loadFullRanking() {
   }
 }
 
-function showFullRanking() {
+function showFullRanking(returnTo = null) {
+  speedrun?.onRankingOpened(typeof returnTo === 'string' ? returnTo : null);
   const el = document.getElementById('full-ranking-panel');
   if (el) el.classList.remove('hidden');
   loadFullRanking();
@@ -1511,6 +1535,7 @@ function showNicknameModal() {
   const inp = document.getElementById('nickname-input');
   inp.value = nickname || '';
   document.getElementById('nickname-error').textContent = '';
+  document.getElementById('nickname-confirm-btn').textContent = nickname ? '변경하기' : '시작하기 🚀';
 
   // 기존 닉네임 있으면(=변경 중) X 버튼 표시, 신규 유저는 숨김
   const box = document.querySelector('#nickname-modal .modal-box');
@@ -1520,7 +1545,7 @@ function showNicknameModal() {
     closeBtn.id = 'nickname-close-btn';
     closeBtn.textContent = '\u2715';
     closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#5588aa;line-height:1;padding:4px;';
-    closeBtn.addEventListener('click', hideNicknameModal);
+    closeBtn.addEventListener('click', () => { hideNicknameModal(); speedrun?.onNicknameCancelled(); });
     box.style.position = 'relative';
     box.appendChild(closeBtn);
   }
@@ -1720,7 +1745,7 @@ async function init() {
   bind('mob-ranking-close', 'click', hideMobileRanking);
   bind('pc-ranking-more-btn',  'click', showFullRanking);
   bind('mob-ranking-more-btn', 'click', showFullRanking);
-  bind('full-ranking-close',   'click', hideFullRanking);
+  bind('full-ranking-close',   'click', () => { hideFullRanking(); speedrun?.onRankingClosed(); });
   bind('mob-change-nick-btn',  'click', () => { hideMobOptions(); showNicknameModal(); });
   bind('change-nickname-btn',  'click', showNicknameModal);
   bind('sound-toggle-btn',     'click', toggleSound);
@@ -1749,7 +1774,11 @@ async function init() {
     db,
     getState: () => ({ score, watermelonCount, nickname, playerId, gameOver }),
     getRankingMode: () => currentRankingMode,
-    ready: () => assetsReady,
+    ready: async () => {
+      await assetsReady;
+      if (!assetsLoaded) { await retryGameImages(); }
+      if (!assetsLoaded) throw new Error('game-images-unavailable');
+    },
     pauseChanged: syncBoardPause,
     resetBoard: resetGameBoard,
     freezeBoard: freezeGameBoard,
@@ -1761,7 +1790,7 @@ async function init() {
   loadRanking();
 
   await assetsReady;
-  assetsLoaded = true;
+  updateAssetStatus();
   updateNextPreview();
   lastFrameTime = performance.now();
   if (!animFrameId && !gameOver) animFrameId = requestAnimationFrame(gameLoop);
