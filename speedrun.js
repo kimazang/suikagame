@@ -5,7 +5,7 @@ import {
 import {
   SPEEDRUN_EVENT_ID, SPEEDRUN_EVENT_TITLE, validRecord, isBetterRecord,
   formatTime, formatElapsedTime, rankRecords, eventStatus, createStopwatch, createPauseGate, isEventLink, eventDateParts,
-} from './speedrun-core.js?v=20261116-speedrun-4';
+} from './speedrun-core.js?v=20261116-speedrun-5';
 
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { const el = $(id); if (el && el.textContent !== String(text)) el.textContent = text; };
@@ -153,15 +153,9 @@ class Speedrun {
         </header>
         <div class="sr-event-body">
           <section class="sr-event-awards" aria-label="이벤트 상금">
-            <p class="sr-prize-total">총 상금 <strong>100만</strong> <span>사이버머니</span></p>
-            <div class="sr-podium">
-              <div class="sr-award sr-award-second" aria-label="2등 30만 사이버머니"><span>2등</span><strong>30<small>만</small></strong><div class="sr-podium-step" aria-hidden="true"></div></div>
-              <div class="sr-award sr-award-first" aria-label="1등 50만 사이버머니">
-                <svg class="sr-trophy" viewBox="0 0 40 40" aria-hidden="true"><path d="M11 8H5v6c0 5 4 8 9 8M29 8h6v6c0 5-4 8-9 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M11 5h18v12c0 6-4 10-9 10s-9-4-9-10z" fill="#ffe39a" stroke="currentColor" stroke-width="2.5"/><path d="M20 27v7M13 35h14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-                <span>1등</span><strong>50<small>만</small></strong><div class="sr-podium-step" aria-hidden="true"></div>
-              </div>
-              <div class="sr-award sr-award-third" aria-label="3등 20만 사이버머니"><span>3등</span><strong>20<small>만</small></strong><div class="sr-podium-step" aria-hidden="true"></div></div>
-            </div>
+            <p class="sr-awards-label">이벤트 상금 <span>사이버머니</span></p>
+            <div class="sr-awards-row"><div><span>1등</span><strong>50만</strong></div>
+              <div><span>2등</span><strong>30만</strong></div><div><span>3등</span><strong>20만</strong></div></div>
           </section>
           <details class="sr-how-to"><summary>참여 방법</summary>
             <ol class="sr-rules"><li><b>3초 카운트 후</b> 시작해요.</li>
@@ -583,7 +577,7 @@ class Speedrun {
     const seq = ++this.fullRequest;
     const isCurrent = () => seq === this.fullRequest && this.hooks.getRankingMode() === 'event';
     document.querySelector('.full-ranking-title').textContent = '⏱ 이벤트 TOP 50';
-    document.querySelector('.full-ranking-sub').textContent = '완성 시간순 · 동시간은 점수순 · 점수까지 같으면 공동 순위';
+    document.querySelector('.full-ranking-sub').textContent = '완성 시간순 · 동시간은 점수순';
     $('full-ranking-list').innerHTML = '<p class="sr-rank-empty">기록을 불러오는 중…</p>';
     try {
       const snap = await delayLimit(getDocs(query(this.recordsCollection(), orderBy('timeCs', 'asc'), orderBy('score', 'desc'), limit(50))));

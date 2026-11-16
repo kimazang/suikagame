@@ -18,7 +18,7 @@ import { getFirestore, doc, setDoc, getDoc,
          getDocs, serverTimestamp, runTransaction }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-import { createSpeedrun } from './speedrun.js?v=20261116-speedrun-4';
+import { createSpeedrun } from './speedrun.js?v=20261116-speedrun-5';
 
 // ====================================================
 // [A] FIREBASE CONFIG — 여기에 입력하세요
