@@ -5,7 +5,7 @@ import {
 import {
   SPEEDRUN_EVENT_ID, SPEEDRUN_EVENT_TITLE, validRecord, isBetterRecord,
   formatTime, formatElapsedTime, rankRecords, eventStatus, createStopwatch, createPauseGate, isEventLink, eventDateParts,
-} from './speedrun-core.js?v=20261116-speedrun-3';
+} from './speedrun-core.js?v=20261116-speedrun-4';
 
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { const el = $(id); if (el && el.textContent !== String(text)) el.textContent = text; };
@@ -142,33 +142,43 @@ class Speedrun {
     dialogs.innerHTML = `
       <dialog id="sr-guide" class="sr-dialog" aria-labelledby="sr-guide-title">
         <button class="sr-close" data-sr="close-guide" type="button" aria-label="안내 닫기">✕</button>
-        <h2 id="sr-guide-title">⏱ ${SPEEDRUN_EVENT_TITLE}</h2>
-        <section class="sr-event-period" aria-label="이벤트 기간">
-          <div class="sr-section-heading"><span>이벤트 기간</span><small>한국시간</small></div>
-          <div class="sr-period-grid"><div><span>시작</span><strong id="sr-guide-start-date">—</strong><time id="sr-guide-start-time">—</time></div>
-            <span class="sr-period-arrow" aria-hidden="true">→</span>
-            <div><span>마감</span><strong id="sr-guide-end-date">—</strong><time id="sr-guide-end-time">—</time></div></div>
-        </section>
-        <section class="sr-prizes" aria-label="이벤트 상금">
-          <div class="sr-section-heading"><span>이벤트 상금</span><small>사이버머니</small></div>
-          <div class="sr-prize-grid"><div><span>1등</span><strong>50만</strong></div>
-            <div><span>2등</span><strong>30만</strong></div><div><span>3등</span><strong>20만</strong></div></div>
-        </section>
-        <div class="sr-guide-player"><span>참여 닉네임</span><strong id="sr-guide-player"></strong>
-          <button id="sr-change-nickname" class="sr-nickname-button" type="button">닉네임 변경하기</button>
-          <small id="sr-guide-best" hidden></small></div>
-        <ol class="sr-rules"><li><b>3초 카운트 후</b> 시작해요.</li>
-          <li><b>1991 한 개를 만들면</b> 시간·점수가 기록돼요.</li>
-          <li>빠른 시간순, 같은 시간은 높은 점수순이에요.</li>
-          <li>재도전은 무제한! 최고 기록만 남아요.</li>
-          <li>일시정지하거나 처음부터 다시 할 수 있어요.</li>
-          <li>탭·앱 전환이나 옵션·랭킹창을 열면 자동 정지돼요.</li></ol>
-        <p class="sr-precision">0.01초 기준 · 시간과 점수가 모두 같으면 공동 순위</p>
-        <p id="sr-prepare-status" class="sr-status" role="status" hidden></p>
-        <div class="sr-button-stack"><button id="sr-start" class="btn btn-orange" type="button" disabled>준비 중…</button>
-          <button data-sr="ranks" class="btn btn-blue" type="button">이벤트 랭킹</button>
-          <button data-sr="close-guide" class="sr-text-button" type="button">일반 게임하기</button></div>
-        <button id="sr-pending" class="sr-text-button" type="button" hidden>대기 기록 등록</button>
+        <header class="sr-event-hero">
+          <span class="sr-event-badge">기간 한정 이벤트</span>
+          <h2 id="sr-guide-title">${SPEEDRUN_EVENT_TITLE}</h2>
+          <div class="sr-event-dates" aria-label="이벤트 기간">
+            <div><strong id="sr-guide-start-date">—</strong><span><time id="sr-guide-start-time">—</time> 시작</span></div>
+            <span class="sr-date-divider" aria-hidden="true">—</span>
+            <div><strong id="sr-guide-end-date">—</strong><span><time id="sr-guide-end-time">—</time> 마감</span></div>
+          </div>
+        </header>
+        <div class="sr-event-body">
+          <section class="sr-event-awards" aria-label="이벤트 상금">
+            <p class="sr-prize-total">총 상금 <strong>100만</strong> <span>사이버머니</span></p>
+            <div class="sr-podium">
+              <div class="sr-award sr-award-second" aria-label="2등 30만 사이버머니"><span>2등</span><strong>30<small>만</small></strong><div class="sr-podium-step" aria-hidden="true"></div></div>
+              <div class="sr-award sr-award-first" aria-label="1등 50만 사이버머니">
+                <svg class="sr-trophy" viewBox="0 0 40 40" aria-hidden="true"><path d="M11 8H5v6c0 5 4 8 9 8M29 8h6v6c0 5-4 8-9 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M11 5h18v12c0 6-4 10-9 10s-9-4-9-10z" fill="#ffe39a" stroke="currentColor" stroke-width="2.5"/><path d="M20 27v7M13 35h14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                <span>1등</span><strong>50<small>만</small></strong><div class="sr-podium-step" aria-hidden="true"></div>
+              </div>
+              <div class="sr-award sr-award-third" aria-label="3등 20만 사이버머니"><span>3등</span><strong>20<small>만</small></strong><div class="sr-podium-step" aria-hidden="true"></div></div>
+            </div>
+          </section>
+          <details class="sr-how-to"><summary>참여 방법</summary>
+            <ol class="sr-rules"><li><b>3초 카운트 후</b> 시작해요.</li>
+              <li><b>1991 한 개를 만들면</b> 시간·점수가 기록돼요.</li>
+              <li>빠른 시간순, 같은 시간은 높은 점수순이에요.</li>
+              <li>재도전은 무제한! 최고 기록만 남아요.</li>
+              <li>일시정지하거나 처음부터 다시 할 수 있어요.</li>
+              <li>탭·앱 전환이나 옵션·랭킹창을 열면 자동 정지돼요.</li></ol>
+          </details>
+          <div class="sr-guide-player"><div class="sr-participant"><span>참여 닉네임</span><strong id="sr-guide-player"></strong><small id="sr-guide-best" hidden></small></div>
+            <button id="sr-change-nickname" class="sr-nickname-button" type="button">닉네임 변경하기</button></div>
+          <p id="sr-prepare-status" class="sr-status" role="status" hidden></p>
+          <div class="sr-guide-actions"><button id="sr-start" class="btn btn-orange" type="button" disabled>준비 중…</button>
+            <div class="sr-secondary-actions"><button data-sr="ranks" class="btn btn-blue" type="button">이벤트 랭킹</button>
+              <button data-sr="close-guide" class="sr-text-button" type="button">일반 게임하기</button></div></div>
+          <button id="sr-pending" class="sr-text-button" type="button" hidden>대기 기록 등록</button>
+        </div>
       </dialog>
       <dialog id="sr-result" class="sr-dialog sr-result" aria-labelledby="sr-result-title">
         <span id="sr-result-emoji" class="sr-result-emoji">🎉</span><h2 id="sr-result-title">1991 완성!</h2>
@@ -251,7 +261,9 @@ class Speedrun {
     this.config = { title: SPEEDRUN_EVENT_TITLE, enabled: data.enabled === true,
       startsAt: data.startsAt?.toMillis?.(), endsAt: data.endsAt?.toMillis?.() };
     const start = eventDateParts(this.config.startsAt), end = eventDateParts(this.config.endsAt);
-    setText('sr-guide-start-date', start.date); setText('sr-guide-start-time', start.time);
+    setText('sr-guide-start-date', start.date);
+    // 안내창에만 적용하는 표시 시간. 실제 참가 판정에는 위 startsAt을 그대로 사용한다.
+    setText('sr-guide-start-time', '14:00');
     setText('sr-guide-end-date', end.date); setText('sr-guide-end-time', end.time);
     return this.config;
   }
